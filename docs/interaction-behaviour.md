@@ -1,5 +1,7 @@
 # Interaction behaviour — 0.6.1
 
+> On the `webos` branch, the Home controls are Live TV, All apps and Settings (Live TV takes Art Mode's place), Samsung Home and the Samsung group become LG Home and the LG TV group, and All apps has All apps, Inputs and Apps on Home tabs. See [webOS port](webos.md). The rest of this specification applies as written.
+
 ## Home
 
 - Dock: Left/Right scrolls the apps without wrapping. Up enters the top-right controls, starting with Art Mode or the last selected control. Left/Right moves between Art Mode, All apps and Settings. Down or Back returns to the selected app. The clock is at the top left.

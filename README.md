@@ -4,6 +4,8 @@ A quieter home screen for Samsung The Frame. Your apps, a photograph and the tim
 
 ![CleanFrame browser preview using the bundled Manrope font](docs/images/cleanframe-dock.jpg)
 
+> **LG webOS branch.** This `webos` branch is a port to LG webOS TVs (tested on a 2020 webOS 5 NANO86). See [docs/webos.md](docs/webos.md) for building, installing and its limits.
+
 I built CleanFrame for one TV: my own Samsung The Frame, running Tizen. I'm sharing the code and setup notes as a starting point for other people to build on.
 
 **Use it at your own risk.** Most of the work has gone into making it work well on my TV. Very little has gone into making it portable. The setup scripts reflect my computer, TV and firmware, so expect to adapt them and test the result on your own hardware.

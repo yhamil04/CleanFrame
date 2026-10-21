@@ -45,7 +45,7 @@
   var VALUE_NAMES = { dark: 'Dark', light: 'Light', photo: 'Photo', list: 'List', dock: 'Dock', type: 'Type', glass: 'Glass', soft: 'Soft', frost: 'Frost', tint: 'Clear tint', icons: 'Icons', both: 'Icons and text', text: 'Text' };
   // Brand marks that a saved non-default app may keep.
   var SAVED_MARKS = ['hbomax', 'spotify', 'tubi', 'applemusic', 'appletv', 'stremio'];
-  var UTIL = { apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'] };
+  var UTIL = { tv: ['Live TV', 'tv'], apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'] };
   var MSG = {
     leave: { title: 'Leave Home?', line: 'Open LG Home?', note: '', actions: [['stay', 'Stay'], ['tvhome', 'LG Home']] }
   };
@@ -488,14 +488,15 @@
   }
 
   /* ---------- Navigation targets ---------- */
-  function utils() { return ['apps', 'settings']; }
+  function utils() { return ['tv', 'apps', 'settings']; }
   /* prev/next run along the apps; out goes to the controls, inn comes back (or to a per-app action). */
   function axes() {
     var v = S.c.layout === 'list';
     return { prev: v ? 'up' : 'left', next: v ? 'down' : 'right', out: v ? 'right' : 'up', inn: v ? 'left' : 'down' };
   }
   function utilAction(u) {
-    if (u === 'apps') openApps();
+    if (u === 'tv') perform('Live TV', FrameDevice.liveTv);
+    else if (u === 'apps') openApps();
     else openSettings();
   }
   function addAppsRoute() { openEditor('home'); }
@@ -681,12 +682,19 @@
   // All apps lists apps; its Inputs view lists the tuner and external inputs.
   function isInput(id) { return app(id).kind === 'input'; }
   function appsItems(t) { return catalog.error ? [] : ALPHA.filter(function (id) { return isInput(id) === !!t.inputs; }); }
+  // Page tabs: All apps and Inputs switch in place; Apps on Home opens the editor.
   function appsHead(t) {
     if (catalog.error) return [['retry', 'Try again', '', '']];
-    // Apps on Home stays first so header focus keeps its place when Inputs appears.
-    return !t.inputs && ALPHA.some(isInput) ? [['editor', 'Apps on Home', '', 'home'], ['inputs', 'Inputs', '', 'tv']] : [['editor', 'Apps on Home', '', 'home']];
+    var tabs = [['all', 'All apps', t.inputs ? '' : 'is-current', 'apps']];
+    if (ALPHA.some(isInput)) tabs.push(['inputs', 'Inputs', t.inputs ? 'is-current' : '', 'tv']);
+    return tabs.concat([['editor', 'Apps on Home', '', 'home']]);
   }
-  function openInputs() { push({ id: 'apps', inputs: true, mode: 'browse', top: 0, f: { zone: 'grid', i: 0, h: 0 } }); }
+  function appsPage(t, inputs) {
+    if (!!t.inputs === inputs) return;
+    t.inputs = inputs; t.top = 0;
+    t.f.i = inputs ? 0 : Math.max(0, appsItems(t).indexOf(S.appsFocus));
+    t.f.h = inputs ? 1 : 0;
+  }
   V.apps = {
     sheet: true,
     norm: function (t) {
@@ -697,18 +705,23 @@
     },
     key: function (t, k) {
       var f = t.f, items = appsItems(t), n = items.length, col = f.i % COLS, row = Math.floor(f.i / COLS), head = appsHead(t), b;
-      if (k === 'back') { pop(); return; }
+      if (k === 'back') { if (t.inputs) { appsPage(t, false); f.zone = appsItems(t).length ? 'grid' : 'head'; } else pop(); return; }
       if (f.zone === 'head') {
         if (k === 'down' && n) f.zone = 'grid';
         else if (k === 'left') f.h = Math.max(0, f.h - 1);
         else if (k === 'right') f.h = Math.min(head.length - 1, f.h + 1);
-        else if (k === 'ok') { b = head[f.h][0]; if (b === 'retry') refreshCatalog(); else if (b === 'inputs') openInputs(); else openEditor('apps'); }
+        else if (k === 'ok') {
+          b = head[f.h][0];
+          if (b === 'retry') refreshCatalog();
+          else if (b === 'all' || b === 'inputs') appsPage(t, b === 'inputs');
+          else openEditor('apps');
+        }
         return;
       }
       if (k === 'left' && col > 0) f.i--;
       else if (k === 'right' && col < COLS - 1 && f.i < n - 1) f.i++;
       else if (k === 'down' && row < Math.ceil(n / COLS) - 1) f.i = Math.min(f.i + COLS, n - 1);
-      else if (k === 'up') { if (row > 0) f.i -= COLS; else { f.zone = 'head'; f.h = 0; } }
+      else if (k === 'up') { if (row > 0) f.i -= COLS; else { f.zone = 'head'; f.h = t.inputs ? 1 : 0; } }
       else if (k === 'ok' && n) launch(items[f.i]);
       if (!t.inputs) S.appsFocus = items[f.i] || null;
     },

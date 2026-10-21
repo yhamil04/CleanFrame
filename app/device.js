@@ -18,7 +18,7 @@
     ['com.webos.app.hdmi1', 'HDMI 1'], ['com.webos.app.hdmi2', 'HDMI 2'], ['com.webos.app.hdmi3', 'HDMI 3'], ['com.webos.app.hdmi4', 'HDMI 4']];
   // TV tuner and external inputs are listed apart from apps.
   var INPUT = /^com\.webos\.app\.(?:livetv|hdmi\d|externalinput\.[a-z0-9]+)$/;
-  var HOME = 'com.webos.app.home', SETTINGS = 'com.palm.app.settings';
+  var HOME = 'com.webos.app.home', SETTINGS = 'com.palm.app.settings', LIVE_TV = 'com.webos.app.livetv';
   // System launch points that are not apps a viewer would put on Home.
   var INTERNAL = /^com\.webos\.app\.(?:home|discovery|customersupport|membership|softwareupdate|notificationcenter|voice|tvhotkey|channelsetting|scheduler)$/;
   var SERVICE = 'luna://com.webos.applicationManager/', pending = [], api;
@@ -63,6 +63,7 @@
   function art(done) { done({ message: 'Art Mode is not available on this TV.' }); }
   function home(done) { launchApp(HOME, done); }
   function settings(done) { launchApp(SETTINGS, done); }
+  function liveTv(done) { launchApp(LIVE_TV, done); }
   function known() {
     var map = {};
     Object.keys(IDS).forEach(function (brand) { map[IDS[brand]] = brand; });
@@ -101,5 +102,5 @@
     });
   }
   // source records whether apps() read the TV's launch points or used the fixed list.
-  api = window.FrameDevice = { launch: launch, launchApp: launchApp, art: art, home: home, settings: settings, apps: apps, source: '' };
+  api = window.FrameDevice = { launch: launch, launchApp: launchApp, art: art, home: home, settings: settings, liveTv: liveTv, apps: apps, source: '' };
 }());
