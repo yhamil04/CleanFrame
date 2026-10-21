@@ -1,0 +1,16 @@
+{
+  "id": "com.yhamil.cleanframe",
+  "version": "0.6.1",
+  "vendor": "yhamil",
+  "type": "web",
+  "main": "index.html",
+  "title": "CleanFrame",
+  "icon": "icon-80.png",
+  "largeIcon": "icon-130.png",
+  "iconColor": "#1d2a30",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true,
+  "requiredACG": [
+    "application.launcher"
+  ]
+}

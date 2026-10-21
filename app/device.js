@@ -1,74 +1,91 @@
-/* Public Tizen application APIs. No Mac server, network address or credentials. */
+/* webOS TV application manager calls through PalmServiceBridge. No Mac server, network address or credentials. */
 (function () {
   'use strict';
+  // UK webOS app IDs for the default Home apps. Names and order live in main.js.
   var IDS = {
-    stremio: 'IkWsFHtOY9.Stremio', netflix: 'org.tizen.netflix-app',
-    disneyplus: 'MCmYXNxgcu.DisneyPlus', youtube: '9Ur5IzDKqV.TizenYouTube',
-    appletv: 'com.samsung.tv.aria-video', primevideo: 'org.tizen.primevideo',
-    abciview: 'mWK87Xghap.ABCiview', sbs: 'OyE7OuxlUi.SBSOnDemand',
-    applemusic: 'org.tizen.apple.apple-music'
+    netflix: 'netflix', youtube: 'youtube.leanback.v4', primevideo: 'amazon',
+    disneyplus: 'com.disney.disneyplus-prod', bbciplayer: 'bbc.iplayer.3.0', itvx: 'com.fvp.itv',
+    appletv: 'com.apple.appletv', spotify: 'spotify-beehive'
   };
-  var STREAMING = ['as6cYRgkPy.Binge', '73iTZRTc34.Stan', '5b8c3eb16b.BeamCTVDev',
-    'KaLitts8bq.tenplaySamsungTizen', 'eYuOiOLYQX.KayoSports', 'Ne2ZsPWdKl.9NOW',
-    '3KA0pm7a7V.TubiTV', 'rJeHak5zRg.Spotify', 'icp4AvUPiA.7plus'];
-  var CONSUMER_SYSTEM = ['org.tizen.browser', 'com.microsoft.copilot'];
-  var EXTRA_BRANDS = {'rJeHak5zRg.Spotify': 'spotify', '5b8c3eb16b.BeamCTVDev': 'hbomax', '3KA0pm7a7V.TubiTV': 'tubi'};
-  var INTERNAL = ['adplatform.ADPlayer', 'WykOS4t4F0.cmsWebApp', '25emanual3.emanual',
-    'ZODRT12q2l.WebAccountExtension', 'ByJlgt0XeD.CastSettingsApp', 'tv6pbVMQFF.PrivacyChoices'];
-  var SELF = 'nClrkHome1.FrameHome';
-  function api() { return window.tizen && window.tizen.application; }
+  var NAMES = {
+    netflix: 'Netflix', youtube: 'YouTube', primevideo: 'Prime Video', disneyplus: 'Disney+',
+    bbciplayer: 'BBC iPlayer', itvx: 'ITVX', appletv: 'Apple TV', spotify: 'Spotify'
+  };
+  // Other launch points with a bundled mark.
+  var EXTRA_BRANDS = {};
+  var HOME = 'com.webos.app.home', SETTINGS = 'com.palm.app.settings';
+  // System launch points that are not apps a viewer would put on Home.
+  var INTERNAL = /^com\.webos\.app\.(?:home|discovery|customersupport|membership|softwareupdate|notificationcenter|voice|tvhotkey|channelsetting|scheduler)$/;
+  var SERVICE = 'luna://com.webos.applicationManager/', pending = [], api;
+  function self() {
+    // PalmSystem.identifier is "<appId> <processId>"; it keeps the self-filter in step with appinfo.json.
+    var id = window.PalmSystem && window.PalmSystem.identifier;
+    return typeof id === 'string' && id ? id.split(' ')[0] : 'com.yhamil.cleanframe';
+  }
+  function available() { return !!window.PalmServiceBridge; }
   function unavailable(done) {
     done({ message: 'Open CleanFrame on the TV to use this control.', detail: 'The web preview cannot control the TV.' });
   }
   function failure(err) {
-    return { message: 'The TV could not open this screen.', detail: err && (err.message || err.name) || 'Try again, or press the remote’s Home button to return to CleanFrame.' };
+    return { message: 'The TV could not open this screen.', detail: err && (err.errorText || err.message || err.name) || 'Try again, or press the remote’s Home button to return to CleanFrame.' };
   }
   function bounded(done) {
     var finished = false, timer = setTimeout(function () { finish({ message: 'The TV did not respond. Please try again.' }); }, 8000);
     function finish(err, value) { if (finished) return; finished = true; clearTimeout(timer); done(err, value); }
     return finish;
   }
-  function launchApp(id, done) {
-    if (!api()) { unavailable(done); return; }
-    var finish = bounded(done);
-    try { api().launch(id, function () { finish(null); }, function (err) { finish(failure(err)); }); }
-    catch (err) { finish(failure(err)); }
+  function call(method, params, done) {
+    if (!available()) { unavailable(done); return; }
+    var finish = bounded(done), bridge;
+    try {
+      // Keep each bridge referenced until it answers; a collected bridge drops its callback.
+      bridge = new window.PalmServiceBridge(); pending.push(bridge);
+      bridge.onservicecallback = function (text) {
+        var reply;
+        pending.splice(pending.indexOf(bridge), 1);
+        try { reply = JSON.parse(text); } catch (e) { reply = { returnValue: false, errorText: 'Unreadable reply' }; }
+        if (!reply || reply.returnValue === false) finish(failure(reply));
+        else finish(null, reply);
+      };
+      bridge.call(SERVICE + method, JSON.stringify(params || {}));
+    } catch (err) { finish(failure(err)); }
   }
+  function launchApp(id, done) { call('launch', { id: id }, function (err) { done(err || null); }); }
   function launch(brand, done) {
     if (!IDS[brand]) { done({message: 'This app has no launch target.'}); return; }
     launchApp(IDS[brand], done);
   }
-  function art(done) {
-    if (!api()) { unavailable(done); return; }
-    var finish = bounded(done);
-    try {
-      var data = [new tizen.ApplicationControlData('mode', ['fullscreen']), new tizen.ApplicationControlData('requester', ['mobile'])];
-      var control = new tizen.ApplicationControl('http://tizen.org/appcontrol/operation/default', null, null, null, data);
-      api().launchAppControl(control, 'org.tizen.art-app', function () { finish(null); }, function (err) { finish(failure(err)); });
-    } catch (err) { finish(failure(err)); }
+  function art(done) { done({ message: 'Art Mode is not available on this TV.' }); }
+  function home(done) { launchApp(HOME, done); }
+  function settings(done) { launchApp(SETTINGS, done); }
+  function known() {
+    var map = {};
+    Object.keys(IDS).forEach(function (brand) { map[IDS[brand]] = brand; });
+    return map;
   }
-  function home(done) { launchApp('com.samsung.tv.csfs', done); }
-  function settings(done) { launchApp('com.samsung.tv.coba.setting', done); }
+  function rank(brand) { return brand && IDS[brand] ? Object.keys(IDS).indexOf(brand) : 30; }
+  // Non-system apps may be denied the launch-point list. Offer the known UK apps instead;
+  // launching one that is not installed reports the TV's own error. Other failures can be retried.
+  function fixedList() {
+    return Object.keys(IDS).map(function (brand) { return { appId: IDS[brand], name: NAMES[brand], brand: brand, icon: '', rank: rank(brand) }; });
+  }
   function apps(done) {
-    if (!api()) { unavailable(done); return; }
-    var finish = bounded(done);
-    try {
-      api().getAppsInfo(function (list) {
-        var known = {}, seen = {}, result = [];
-        Object.keys(IDS).forEach(function (brand) { known[IDS[brand]] = brand; });
-        list.forEach(function (a) {
-          var primary = !!known[a.id], stream = STREAMING.indexOf(a.id) >= 0;
-          var consumer = /^[A-Za-z0-9]{10}\.[A-Za-z0-9_-]+$/.test(a.id) || CONSUMER_SYSTEM.indexOf(a.id) >= 0;
-          if (a.id === SELF || INTERNAL.indexOf(a.id) >= 0 || seen[a.id] || !a.name || (!primary && !stream && (!a.show || !consumer))) return;
-          if (!primary && /(?:service|worker|preview|promotion|plugin|launcher|test|sdk|^ep[ -]|factory|daemon)/i.test(a.name + ' ' + a.id)) return;
-          if (/-dummy$/.test(a.id) || a.id === 'com.samsung.tv.cobalt-yt') return;
-          seen[a.id] = true;
-          result.push({ appId: a.id, name: a.name, brand: known[a.id] || EXTRA_BRANDS[a.id] || '', icon: a.iconPath || '', rank: primary ? Object.keys(IDS).indexOf(known[a.id]) : (stream ? 20 : 30) });
-        });
-        result.sort(function (a, b) { return a.rank - b.rank || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
-        finish(null, result);
-      }, function (err) { finish(failure(err)); });
-    } catch (err) { finish(failure(err)); }
+    if (!available()) { unavailable(done); return; }
+    call('listLaunchPoints', {}, function (err, reply) {
+      var map = known(), me = self(), seen = {}, result = [];
+      if (err && !/denied|permission|not allowed|unknown method/i.test(err.detail || '')) { done(err); return; }
+      if (err || !reply.launchPoints || !reply.launchPoints.length) { api.source = 'fixed'; done(null, fixedList()); return; }
+      api.source = 'launchPoints';
+      reply.launchPoints.forEach(function (p) {
+        var id = p && p.id, brand = map[id] || EXTRA_BRANDS[id] || '';
+        if (!id || !p.title || id === me || seen[id] || INTERNAL.test(id)) return;
+        seen[id] = true;
+        result.push({ appId: id, name: p.title, brand: brand, icon: p.icon || '', rank: map[id] ? rank(brand) : 30 });
+      });
+      result.sort(function (a, b) { return a.rank - b.rank || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
+      done(null, result);
+    });
   }
-  window.FrameDevice = { launch: launch, launchApp: launchApp, art: art, home: home, settings: settings, apps: apps };
+  // source records whether apps() read the TV's launch points or used the fixed list.
+  api = window.FrameDevice = { launch: launch, launchApp: launchApp, art: art, home: home, settings: settings, apps: apps, source: '' };
 }());

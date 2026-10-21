@@ -41,6 +41,15 @@ for wall in walls:
     for suffix in ['study-soft', 'field-blur', 'field-frost', 'field-clear']:
         assert (app / ('assets/materials/' + wall_id + '-' + suffix + '.jpg')).is_file(), 'Missing registered material: ' + wall_id + '/' + suffix
     assert (app / ('assets/wallpapers/' + wall_id + '-panel.jpg')).is_file(), 'Missing panel backdrop: ' + wall_id
-for icon in ['stremio', 'netflix', 'disneyplus', 'youtube', 'appletv', 'primevideo', 'abciview', 'sbs', 'applemusic', 'art', 'apps', 'settings']:
+for icon in ['netflix', 'youtube', 'primevideo', 'disneyplus', 'appletv', 'spotify', 'apps', 'settings']:
     assert (app / ('assets/icons/' + icon + '.svg')).is_file(), 'Missing icon: ' + icon
+# webOS manifest: its own identity, Back delivered to the app, and icons at the sizes webOS expects.
+info = json.loads((app / 'appinfo.json').read_text())
+assert info.get('type') == 'web' and (app / info.get('main', '')).is_file(), 'webOS entry point missing'
+assert re.fullmatch(r'[a-z0-9]+(?:\.[a-z0-9-]+)+', info.get('id', '')) and not info['id'].startswith(('com.webos.', 'com.palm.', 'com.lge.')), 'Use your own webOS app ID'
+assert info.get('version') == json.loads((root / 'package.json').read_text())['version'], 'appinfo/package versions differ'
+assert info.get('disableBackHistoryAPI') is True, 'Back (461) must reach the app'
+for field, size in [('icon', 80), ('largeIcon', 130)]:
+    data = (app / info[field]).read_bytes()
+    assert data[:8] == b'\x89PNG\r\n\x1a\n' and int.from_bytes(data[16:20], 'big') == size == int.from_bytes(data[20:24], 'big'), 'webOS ' + field + ' must be a ' + str(size) + 'px PNG'
 print('Widget identity, version and bundled resources are valid.')
