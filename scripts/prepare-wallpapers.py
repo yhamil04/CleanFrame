@@ -2,6 +2,7 @@
 
 The original nine photos retain their macOS sips recipe. The six newer photos
 use Pillow (development dependency only); see docs/assets.md.
+Personal photos use scripts/add-wallpapers.py instead and stay in .local/wallpapers/.
 """
 import argparse
 from hashlib import sha256

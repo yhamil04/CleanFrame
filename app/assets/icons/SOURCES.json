@@ -11,5 +11,10 @@
   "art": "CleanFrame original utility outline, 24px grid / 1.6px stroke",
   "apps": "CleanFrame original utility outline, 24px grid / 1.6px stroke",
   "settings": "CleanFrame original utility outline, 24px grid / 1.6px stroke",
-  "home": "CleanFrame original utility outline, 24px grid / 1.6px stroke"
+  "home": "CleanFrame original utility outline, 24px grid / 1.6px stroke",
+  "viaplay": "https://raw.githubusercontent.com/simple-icons/simple-icons/16.35.0/icons/viaplay.svg (simple-icons npm 16.35.0, CC0-1.0; shape unchanged, white fill)",
+  "itvx": "https://raw.githubusercontent.com/simple-icons/simple-icons/16.35.0/icons/itvx.svg (simple-icons npm 16.35.0, CC0-1.0; shape unchanged, white fill)",
+  "twitch": "https://raw.githubusercontent.com/simple-icons/simple-icons/16.35.0/icons/twitch.svg (simple-icons npm 16.35.0, CC0-1.0; shape unchanged, white fill)",
+  "input-hdmi": "CleanFrame original utility outline, 24px grid / 1.6px stroke (generic HDMI-style port)",
+  "input-tv": "CleanFrame original utility outline, 24px grid / 1.6px stroke (television with antenna)"
 }
