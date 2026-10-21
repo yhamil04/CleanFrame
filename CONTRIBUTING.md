@@ -1,10 +1,12 @@
-# Contributing to CleanFrame
+# Contributing to CleanFrame for LG webOS
 
-CleanFrame was built for one Samsung The Frame, with very little work on portability. Use it at your own risk and treat it as a starting point for your own version. Forks and adaptations are encouraged. Contributions back to this repo should keep the remote experience simple and state what has actually been tested.
+This fork ports [CleanFrame](https://github.com/nthnclrk/CleanFrame), created by Nathan Clark, to LG webOS TVs. The interface, glass materials and remote navigation are his work. This fork is LG webOS only: **changes for Samsung The Frame or Tizen belong in [the original repository](https://github.com/nthnclrk/CleanFrame)**, not here.
+
+The port is developed on one TV (a 2020 LG NANO86, webOS 5, not rooted). Contributions should keep the remote experience simple and state what has actually been tested.
 
 ## Start in the browser
 
-Use the README's public-font setup. Keep changes in `app/` and the maintained tools in `scripts/`. Use your browser to develop interface changes.
+Use the README's public-font setup. Keep changes in `app/` and the maintained tools in `scripts/`. Develop interface changes in the browser.
 
 ```sh
 npm ci
@@ -15,20 +17,22 @@ CLEANFRAME_PUBLIC_FONTS=1 npm run check:browser
 npm run check:public
 ```
 
-Keep runtime JavaScript ES5-compatible. Use existing focus, panel and preference logic. A new CSS/DOM API needs target-device evidence before it becomes a compatibility claim. Keep new dependencies in development tooling unless the runtime need is clear.
+Keep runtime JavaScript ES5-compatible; `npm run check` rejects newer syntax in the TV scripts. The reference TV's engine is Chromium 68, so avoid newer CSS such as flex `gap` and `inset`. Use the existing focus, panel and preference logic. A new CSS/DOM or Luna service API needs evidence from a webOS TV before it becomes a compatibility claim. Keep new dependencies in development tooling unless the runtime need is clear.
 
 ## Propose a change
 
-For a bug, describe the trigger, expected result and actual result. Include browser/viewport or TV model and full firmware version. For a new feature, explain the task it helps someone complete from the sofa. Open an issue before changing the app model or introducing a new service dependency.
+For a bug, describe the trigger, expected result and actual result. Include the browser and viewport, or the TV model, webOS version and firmware version. For a new feature, explain the task it helps someone complete from the sofa. Open an issue before changing the app model or introducing a new service dependency.
 
-A pull request should explain the resulting behaviour, the checks run and any untested device result. Include a public-font screenshot for visual changes. Check both List and Dock, single focus, panel Back behaviour and saved-preference recovery when relevant. The TV remote remains the final check for remote feel; browser throttling is only a comparison.
+A pull request should explain the resulting behaviour, the checks run and any untested TV result. Include a public-font screenshot for visual changes. Check both List and Dock, single focus, panel Back behaviour and saved-preference recovery when relevant. The TV remote remains the final check for remote feel; browser throttling is only a comparison.
 
-## Device work and privacy
+New app IDs for All apps (the fixed list in `app/device.js`) should say where the ID was verified, for example `getAppLoadStatus` returning `exist: true` on a named model and region.
 
-Use your own Samsung account, app identity, author certificate and distributor certificate. Follow the staged setup guide and keep native Home/startup experiments separate from UI work. Each TV owner decides whether and when to permit interruptions or settings changes.
+## TV work and privacy
 
-Keep passwords, tokens, signing keys, serial numbers, DUIDs, addresses and original native settings out of issues, screenshots and PRs. Keep a private setup/recovery record. Report security issues through GitHub's private vulnerability reporting if enabled, or an established private channel with the maintainer; do not attach credentials to a public issue.
+Use your own app ID in the ignored `.local/webos.json` and your own Developer Mode session. Each TV owner decides whether and when to permit installs, launches or settings changes. This project does not cover rooting.
+
+Keep passwords, keys, TV addresses, serial numbers, device identifiers and personal app IDs out of issues, screenshots and PRs. `npm run check:public` flags common cases. Report security issues through GitHub's private vulnerability reporting if enabled; do not attach credentials to a public issue.
 
 ## Assets and licences
 
-CleanFrame's original code is MIT. Contributions to that code use the same licence. Keep upstream asset licences and source records intact. Add only assets you have permission to redistribute, and explain any required attribution or separate terms. Personal paid fonts stay under `.local/`; the public app must work without them. Review `THIRD_PARTY_NOTICES.md` before adding or replacing a logo, photograph or font.
+The code is MIT, under both Nathan Clark's original copyright and the fork's contributors; contributions use the same licence. Keep upstream asset licences and source records intact. Add only assets you have permission to redistribute, and explain any required attribution or separate terms. Personal paid fonts stay under `.local/`; the app must work without them and the webOS package never includes them. Review `THIRD_PARTY_NOTICES.md` before adding or replacing a logo, photograph or font.

@@ -25,7 +25,11 @@ All fields use the centred 1920 x 1080 crop. The small panel backdrop comes from
 
 `node scripts/build-icon-metrics.mjs` measures the SVGs in an aspect-preserved 240px viewport, matching the CSS mask renderer. Output is ignored `.local/materials/metrics.js`; review before copying it into `app/assets/icons/metrics.js`. The TV reads these bounds and does not scan icon pixels.
 
-## New or replacement photographs
+## Your own photos
+
+To use personal photos without committing them, run `npm run wallpapers:add -- <folder>`. The photos and their rendered materials stay in the ignored `.local/wallpapers/`. `npm run dev` and the webOS package include them; `CLEANFRAME_PERSONAL_WALLPAPERS=0` or the `--public-fonts` preview leaves them out. See [Your own photos](../app/assets/wallpapers/README.md#your-own-photos).
+
+## New or replacement bundled photographs
 
 Full-size original photographs are local inputs and are not required for glass regeneration: the bundled 1920px JPEGs are the rendering inputs. To recreate JPEGs/thumbnails from the original supplied filenames on a Mac:
 

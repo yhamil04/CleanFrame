@@ -1,7 +1,7 @@
 {
-  "id": "com.yhamil.cleanframe",
+  "id": "com.example.cleanframe",
   "version": "0.6.1",
-  "vendor": "yhamil",
+  "vendor": "CleanFrame for LG",
   "type": "web",
   "main": "index.html",
   "title": "CleanFrame",

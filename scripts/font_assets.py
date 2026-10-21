@@ -1,8 +1,9 @@
-"""Build the exact private-font overlay used by preview and local packaging.
+"""Build the font overlay used by the browser preview and the webOS package.
 
 Pangram binaries remain in ignored .local/ storage. A public checkout ships
-Manrope, Geist and Newsreader. Complete local Pangram pairs are added directly
-to the widget ZIP; they are never copied into app/.
+Manrope, Geist and Newsreader. Complete local Pangram pairs are served only by
+the private browser preview (npm run dev); they are never copied into app/ and
+the webOS package always uses public fonts.
 """
 from pathlib import Path
 import json
@@ -31,7 +32,7 @@ PRIVATE_FONTS = [
 
 
 def is_runtime_source(name):
-    """Keep retained rendering tools and legacy layout assets out of the widget."""
+    """Keep retained rendering tools and legacy layout assets out of the package."""
     if name in ['grid.css', 'optics.js']:
         return False
     if name.startswith(('assets/grid/', 'assets/vendor/')):
@@ -64,14 +65,14 @@ def font_overlay(root=ROOT, include_private=True):
     return assets
 
 
-def write_widget_archive(output, root=ROOT, include_private=True):
-    """Create an unsigned archive without reading signing or device settings."""
+def write_widget_archive(output, root=ROOT, include_private=False):
+    """Create a ZIP of the runtime app without reading device settings. Public fonts by default."""
     app = root / 'app'
     overlay = font_overlay(root, include_private)
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED, allowZip64=False) as package:
         for source in sorted(app.rglob('*')):
             if source.is_symlink():
-                raise ValueError('Widget assets must be regular files, not symlinks: ' + str(source.relative_to(app)))
+                raise ValueError('App assets must be regular files, not symlinks: ' + str(source.relative_to(app)))
             if not source.is_file():
                 continue
             name = source.relative_to(app).as_posix()

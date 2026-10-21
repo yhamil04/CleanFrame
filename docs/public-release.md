@@ -1,33 +1,21 @@
-# Public release review
+# Public release checklist
 
-Prepared 20 October 2026. CleanFrame began on one personal Samsung The Frame. Very little portability work has been done. The README presents it as a starting point to fork and adapt at the user's own risk.
+CleanFrame for LG webOS is a public fork of Nathan Clark's [CleanFrame](https://github.com/nthnclrk/CleanFrame), which was reviewed and published under the MIT licence on 20 October 2026. This fork keeps his copyright notice, credits him in the README, CONTRIBUTING and notices, and contains no Samsung/Tizen tooling.
 
 ## Source boundary
 
-The public source contains the current 0.6.1 app, public-font screenshot, development tools, browser tests, setup notes and asset notices. Research folders, design studies, draft writing, unused Grid/optics code and obsolete generated images were removed after the owner's approval. Recoverable copies remain outside the public source.
+The public source contains the webOS app, a public-font screenshot, development tools, browser tests, setup notes and asset notices. Paid Pangram fonts, keys, TV addresses, device identifiers, the owner's app ID (`.local/webos.json`), personal wallpapers (`.local/wallpapers/`) and generated packages stay in ignored `.local/` and `dist/`. The tracked app ID is the generic `com.example.cleanframe`.
 
-Paid Pangram fonts, signing keys, account tokens, local device addresses, recovery state and personal signed widgets remain in ignored local storage. Public preview and export use only Manrope, Geist and Newsreader. The public font check also verifies the expected font files and hashes.
+## Before publishing
+
+1. Run `npm run check`, `CLEANFRAME_PUBLIC_FONTS=1 npm run check:browser` and `npm run check:public`. The public check covers private paths, credential patterns, proprietary font bytes and personal identifiers (personal app IDs, home-directory paths, email addresses, private IP and MAC addresses). It is bounded and cannot guarantee the absence of every secret.
+2. Check that the GitHub Actions run for the revision passed; local and hosted results are separate.
+3. For a downloadable package, build it with `npm run webos:package`. It always uses the public fonts and includes `LICENSE` and `THIRD_PARTY_NOTICES.md`. Build it with `CLEANFRAME_PERSONAL_WALLPAPERS=0` so personal photos from `.local/wallpapers/` are left out, and do not publish a package built with a personal app ID unless that is intended.
+4. Keep Nathan Clark's copyright line in `LICENSE` and the credits in the README and notices.
+5. Review new images for location or personal metadata, and new assets against [third-party notices](../THIRD_PARTY_NOTICES.md) and [asset sources](asset-sources.md).
 
 ## Asset review
 
-Each of the fifteen wallpaper pages was checked for author and Unsplash licence on 20 October 2026; see [asset sources](asset-sources.md). ABC and SBS icons now use documented MIT Custom Brand Icons sources. Font and icon licence texts are retained. Original code uses MIT; third-party assets keep their own terms in [third-party notices](../THIRD_PARTY_NOTICES.md).
+The upstream review checked each of the fifteen wallpaper pages for author and Unsplash licence on 20 October 2026; see [asset sources](asset-sources.md). Font and icon licence texts are retained beside the assets. Original code uses MIT; third-party assets keep their own terms.
 
-## Validation
-
-A separate clean snapshot contains 193 files, about 17 MB, without private setup. It passed `npm ci`, source/resource checks, public-source and font-hash checks, all 344 Chromium acceptance checks, and an unsigned public-font export. The export contains exactly three public font binaries. `npm audit` reported zero known vulnerabilities. The retained material and icon-metric generators also passed local smoke checks. These results do not establish physical-TV behaviour.
-
-Gitleaks found no credential leaks in the two published pre-release main commits, the cleaned source directory or the clean release history. Thirteen local proprietary font binaries were compared against the clean release Git objects; none matched. All local Markdown links resolved. The 107 source images contained no private location or descriptive metadata; the retained EXIF fields were dimensions, colour space and resolution. Automated checks are bounded: they cannot guarantee the absence of every possible secret or establish third-party rights beyond the documented source review.
-
-The GitHub check workflow uses public fonts and browser validation. Check its result for the revision being published; local success and hosted success are separate results.
-
-## Publication boundary
-
-The existing private Git history contains the removed studies. Deleting current files does not remove those earlier versions. A separate clean Git history was prepared for the public copy, and the original history is backed up privately.
-
-The owner approved this publication route on 20 October 2026: keep the original GitHub repository private, rename it `CleanFrame-private-backup`, and create a fresh `CleanFrame` repository from the reviewed clean history. Validate the new remote source and hosted checks while private, then change only the new copy to public. Update local Git routing so the old history cannot be pushed into the public copy.
-
-This route avoids relying on a force-push to erase earlier hosted objects. [GitHub documents](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) that rewritten commits can remain accessible through cached views or references. The recommendation to retain the old repository privately follows from that limitation. The approval covers renaming the private repository, creating the clean copy and publishing it. Future device work, release uploads and changes to visibility need their own instructions.
-
-At the GitHub inventory check, the repository was private, with one main branch, no tags, no releases, no Actions runs and no Actions artifacts. Recheck that inventory before changing visibility. Verify the remote source and unauthenticated public view after the approved visibility change. The private backup must remain private.
-
-Keep public downloads to the unsigned public-font export with its notices. Personal signed packages can contain proprietary fonts. Reference-device installation results are recorded in [TV status](tv-status.md); the public-source review did not contact or change the TV.
+Deleting a file does not remove it from Git history. Visibility changes, release uploads and history rewrites need their own explicit instruction.

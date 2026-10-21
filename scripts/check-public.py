@@ -1,4 +1,4 @@
-"""Check source paths, known private font blobs and common credential patterns.
+"""Check source paths, known private font blobs, credential patterns and personal identifiers.
 
 This is a bounded release check, not a licence or complete secret audit.
 """
@@ -19,7 +19,17 @@ candidates = set(git('ls-files', '--cached', '--others', '--exclude-standard', '
 objects = git('rev-list', '--objects', '--all').decode().splitlines()
 findings = []
 font_suffixes = {'.ttf', '.otf', '.woff', '.woff2', '.eot'}
-private_suffixes = {'.p12', '.pem', '.key', '.csr', '.wgt'}
+private_suffixes = {'.p12', '.pem', '.key', '.csr', '.wgt', '.ipk'}
+# Personal identifiers that belong in ignored .local/ files. Placeholders such as
+# com.example.cleanframe, com.<yourname>.cleanframe and noreply addresses are allowed.
+privacy_patterns = {
+    'personal webOS app ID': r'\bcom\.(?!example\.)[a-z0-9-]+\.cleanframe\b',
+    'home-directory path': r'/Users/[A-Za-z]',
+    'email address': r'(?<![A-Za-z0-9._%+-])(?!noreply@|no-reply@)[A-Za-z0-9._%+-]+@(?!users\.noreply\.github\.com\b|example\.(?:com|org)\b)'
+                     r'[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b',
+    'private IPv4 address': r'(?<![\d.])(?:10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})(?![\d.])',
+    'MAC address': r'\b[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}\b',
+}
 
 
 def forbidden(name):
@@ -59,6 +69,10 @@ for name in sorted(candidates):
                 r'AKIA[A-Z0-9]{16}']
     if any(re.search(pattern, content) for pattern in patterns):
         findings.append('Credential pattern: ' + name)
+    for kind, pattern in privacy_patterns.items():
+        match = re.search(pattern, content)
+        if match:
+            findings.append('Private identifier (' + kind + '): ' + name + ':' + str(content.count('\n', 0, match.start()) + 1))
 
 object_ids = {line.split(' ', 1)[0] for line in objects}
 for line in objects:

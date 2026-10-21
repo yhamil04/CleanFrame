@@ -1,15 +1,30 @@
-# CleanFrame
+# CleanFrame for LG webOS
 
-`app/` is the current packaged UI. Read `docs/development.md` and `docs/interaction-behaviour.md` before app changes. For a new contributor or a separate TV installation, also read `docs/for-agents.md`.
+This repository is an LG webOS port of Nathan Clark's [CleanFrame](https://github.com/nthnclrk/CleanFrame). It is LG webOS only; Samsung/Tizen work belongs upstream.
 
-Use simple HTML, CSS and ES5-compatible JavaScript for the TV. Node tooling can use modern JavaScript. Preserve remote focus/navigation, preference migrations and cached rendering. Read `docs/assets.md` before changing images, glass geometry or icon sizing; keep live blur and pixel analysis off the TV animation path.
+`app/` is the webOS app (`appinfo.json`, UI and runtime assets). Read `docs/development.md` and `docs/interaction-behaviour.md` before app changes, and `docs/webos.md` before packaging or TV work. For a new contributor or someone else's TV, also read `docs/for-agents.md`.
 
-Run `npm run check` for app changes. For interaction changes, run the browser preview and `CLEANFRAME_PUBLIC_FONTS=1 npm run check:browser`; public contributors must not need proprietary fonts. Run `npm run check:public` and `npm run export:public` before preparing a public download. Follow `CONTRIBUTING.md` and retain third-party notices.
+## Runtime rules
 
-Browser/repository tasks do not authorise device access. Read `docs/tv-status.md` before compatibility claims and `docs/agent-tv-setup-guide.md` before a new TV setup. An explicit device task is required even for queries that stage a helper. Announce any installation, app launch or restart; confirm visible results with the owner. Treat native Home/startup writes as a separate task with explicit authority and an exact-value recovery baseline.
+- The reference TV runs webOS 5 with Chromium 68. Use simple HTML, CSS and ES5 JavaScript in `app/`. `npm run check` parses the runtime scripts as ES5. Node tooling can use modern JavaScript.
+- Avoid CSS newer than Chromium 68: no flex `gap`, no `inset`, and no reliance on `:focus-visible`. Use sibling margins and explicit offsets instead.
+- Keep device calls in `app/device.js` (the `FrameDevice` adapter over `PalmServiceBridge`); keep interaction in `app/main.js`.
+- Preserve remote focus/navigation, preference migrations (`cleanframe.home.v1`) and cached rendering. Read `docs/assets.md` before changing images, glass geometry or icon sizing; keep live blur and pixel analysis off the TV animation path.
 
-On the maintainer's TV, preserve the stable package/application identity, author certificate and existing native Home assignment. For an independent user's installation, generate their own identity and certificates, and update manifest checks, launch/self-filter IDs and helper targets consistently. `scripts/package.py`, `scripts/tv.py` and `scripts/native-home/` contain reference-machine assumptions; they are not an unattended installer.
+## Checks
 
-Keep proprietary fonts, signing keys, passwords, device identifiers, addresses, SDKs, recovery values and generated packages in ignored `.local/` or `dist/`. Never commit paid font binaries or publish a private-font widget. Public-code licensing does not replace the terms in `THIRD_PARTY_NOTICES.md`.
+Run `npm run check` for app changes. For interaction changes, run the browser preview and `CLEANFRAME_PUBLIC_FONTS=1 npm run check:browser`; contributors must not need proprietary fonts. Run `npm run check:public` before publishing anything. Follow `CONTRIBUTING.md` and retain third-party notices.
 
-On Nathan's Mac, use `/Users/nathan/.local/bin/gh-for-repo` for GitHub CLI work. On another machine, use the contributor's own authenticated GitHub account. Preserve shared or uncommitted work. Use reversible deletion; never reset, force-push or rewrite history without explicit authority. Publication/visibility changes require a separate instruction.
+## TV access
+
+Repository and browser tasks do not authorise TV access. `npm run webos:install`, `webos:launch`, `webos:inspect` and any `ares-*` command reach the TV; run them only in an explicit device task, announce each install or launch to the TV's owner first, and confirm visible results with the owner. Read `docs/tv-status.md` before making compatibility claims. Do not attempt rooting or changes to LG's Home or startup.
+
+## Identity and private material
+
+The tracked app ID is the generic `com.example.cleanframe`. Each owner sets their own reverse-domain ID and vendor in the ignored `.local/webos.json`; `scripts/webos.py` applies it when packaging, installing, launching and inspecting. Keep an existing installation's ID stable, or the TV treats it as a different app.
+
+Keep proprietary fonts, keys, passwords, TV addresses, device identifiers, personal app IDs (`.local/webos.json`), personal wallpapers (`.local/wallpapers/`) and generated packages in ignored `.local/` or `dist/`. Never commit paid font binaries or publish a package containing them. Public-code licensing does not replace the terms in `THIRD_PARTY_NOTICES.md`.
+
+## Git
+
+Use the contributor's own authenticated GitHub account. Preserve shared or uncommitted work. Use reversible deletion; never reset, force-push or rewrite history without explicit authority. Publication and visibility changes require a separate instruction.
