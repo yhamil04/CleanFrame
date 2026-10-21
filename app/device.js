@@ -5,13 +5,19 @@
   var IDS = { netflix: 'netflix', youtube: 'youtube.leanback.v4', primevideo: 'amazon', disneyplus: 'com.disney.disneyplus-prod' };
   var NAMES = { netflix: 'Netflix', youtube: 'YouTube', primevideo: 'Prime Video', disneyplus: 'Disney+' };
   // Other launch points with a bundled mark.
-  var EXTRA_BRANDS = { 'com.apple.appletv': 'appletv', 'com.apple.applemusic': 'applemusic', 'spotify-beehive': 'spotify' };
-  // When the launch-point list is denied, All apps offers these and the Home apps, if installed.
-  // BBC iPlayer, ITVX and Spotify IDs are the usual UK ones but were not installed on the reference TV.
-  var MORE = [['com.apple.appletv', 'Apple TV'], ['com.apple.applemusic', 'Apple Music'], ['bbc.iplayer.3.0', 'BBC iPlayer'], ['com.fvp.itv', 'ITVX'],
-    ['spotify-beehive', 'Spotify'], ['tv.twitch.tv.starshot.lg', 'Twitch'], ['com.webos.app.livetv', 'Live TV'],
-    ['com.webos.app.browser', 'Web Browser'], ['com.webos.app.photovideo', 'Photo & Video'], ['com.webos.app.music', 'Music'],
+  var EXTRA_BRANDS = { 'com.apple.appletv': 'appletv', 'com.apple.applemusic': 'applemusic', 'spotify-beehive': 'spotify',
+    'io.strem.tv': 'stremio', 'com.wbd.hbomax': 'hbomax' };
+  // When the launch-point list is denied, All apps offers these and the Home apps, if installed. An app
+  // installed later appears automatically only if its ID is listed here. Stremio, HBO Max, Pathé,
+  // Viaplay, Apple TV and Apple Music were verified on the reference TV; BBC iPlayer, ITVX and Spotify
+  // use the usual UK IDs but were not installed there.
+  var MORE = [['com.apple.appletv', 'Apple TV'], ['com.apple.applemusic', 'Apple Music'], ['io.strem.tv', 'Stremio'], ['com.wbd.hbomax', 'HBO Max'],
+    ['pathe', 'Pathé'], ['viaplay-lg', 'Viaplay'], ['bbc.iplayer.3.0', 'BBC iPlayer'], ['com.fvp.itv', 'ITVX'],
+    ['spotify-beehive', 'Spotify'], ['tv.twitch.tv.starshot.lg', 'Twitch'], ['com.webos.app.browser', 'Web Browser'],
+    ['com.webos.app.photovideo', 'Photo & Video'], ['com.webos.app.music', 'Music'], ['com.webos.app.livetv', 'Live TV'],
     ['com.webos.app.hdmi1', 'HDMI 1'], ['com.webos.app.hdmi2', 'HDMI 2'], ['com.webos.app.hdmi3', 'HDMI 3'], ['com.webos.app.hdmi4', 'HDMI 4']];
+  // TV tuner and external inputs are listed apart from apps.
+  var INPUT = /^com\.webos\.app\.(?:livetv|hdmi\d|externalinput\.[a-z0-9]+)$/;
   var HOME = 'com.webos.app.home', SETTINGS = 'com.palm.app.settings';
   // System launch points that are not apps a viewer would put on Home.
   var INTERNAL = /^com\.webos\.app\.(?:home|discovery|customersupport|membership|softwareupdate|notificationcenter|voice|tvhotkey|channelsetting|scheduler)$/;
@@ -66,8 +72,8 @@
   // Non-system apps may be denied the launch-point list, but may ask whether an app exists.
   // Offer the installed candidates; if that check also fails, offer them all and let launch report.
   function fixedList(done) {
-    var list = Object.keys(IDS).map(function (brand) { return { appId: IDS[brand], name: NAMES[brand], brand: brand, icon: '', rank: rank(brand) }; })
-      .concat(MORE.map(function (m) { return { appId: m[0], name: m[1], brand: EXTRA_BRANDS[m[0]] || '', icon: '', rank: 30 }; }));
+    var list = Object.keys(IDS).map(function (brand) { return { appId: IDS[brand], name: NAMES[brand], brand: brand, icon: '', kind: 'app', rank: rank(brand) }; })
+      .concat(MORE.map(function (m) { return { appId: m[0], name: m[1], brand: EXTRA_BRANDS[m[0]] || '', icon: '', kind: INPUT.test(m[0]) ? 'input' : 'app', rank: 30 }; }));
     var left = list.length, keep = [];
     list.forEach(function (entry, i) {
       call('getAppLoadStatus', { appId: entry.appId }, function (err, reply) {
@@ -88,7 +94,7 @@
         var id = p && p.id, brand = map[id] || EXTRA_BRANDS[id] || '';
         if (!id || !p.title || id === me || seen[id] || INTERNAL.test(id)) return;
         seen[id] = true;
-        result.push({ appId: id, name: p.title, brand: brand, icon: p.icon || '', rank: map[id] ? rank(brand) : 30 });
+        result.push({ appId: id, name: p.title, brand: brand, icon: p.icon || '', kind: INPUT.test(id) ? 'input' : 'app', rank: map[id] ? rank(brand) : 30 });
       });
       result.sort(function (a, b) { return a.rank - b.rank || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
       done(null, result);

@@ -43,6 +43,8 @@
   var LOOK_VALUES = { bg: ['dark', 'light', 'photo'], layout: ['list', 'dock'], apps: ['icons', 'both', 'text'], font: Object.keys(FONTS).filter(function (id) { return id === 'manrope' || PRIVATE_FONTS.indexOf(id) >= 0; }), controls: ['icons', 'both', 'text'], focus: ['type', 'glass'], material: ['soft', 'frost', 'tint'] };
   var LOOK_NAMES = { bg: 'Background', layout: 'Layout', apps: 'Apps', font: 'Font', controls: 'Home controls', focus: 'Focus', material: 'Material' };
   var VALUE_NAMES = { dark: 'Dark', light: 'Light', photo: 'Photo', list: 'List', dock: 'Dock', type: 'Type', glass: 'Glass', soft: 'Soft', frost: 'Frost', tint: 'Clear tint', icons: 'Icons', both: 'Icons and text', text: 'Text' };
+  // Brand marks that a saved non-default app may keep.
+  var SAVED_MARKS = ['hbomax', 'spotify', 'tubi', 'applemusic', 'appletv', 'stremio'];
   var UTIL = { apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'] };
   var MSG = {
     leave: { title: 'Leave Home?', line: 'Open LG Home?', note: '', actions: [['stay', 'Stay'], ['tvhome', 'LG Home']] }
@@ -325,7 +327,7 @@
     var legacyList = s.theme === 'list', h = [], recent = [], records = Array.isArray(s.appRecords) ? s.appRecords : [];
     records.slice(0, 256).forEach(function (a) {
       if (!a || !safeId(a.id) || !safeId(a.appId) || typeof a.name !== 'string' || !a.name.trim() || app(a.id)) return;
-      APPS.push({ id: a.id, appId: a.appId, name: a.name.slice(0, 160), brand: ['hbomax', 'spotify', 'tubi', 'applemusic', 'appletv'].indexOf(a.brand) >= 0 ? a.brand : '', mark: ['hbomax', 'spotify', 'tubi', 'applemusic', 'appletv'].indexOf(a.brand) >= 0, icon: safeIcon(a.icon) });
+      APPS.push({ id: a.id, appId: a.appId, name: a.name.slice(0, 160), brand: SAVED_MARKS.indexOf(a.brand) >= 0 ? a.brand : '', mark: SAVED_MARKS.indexOf(a.brand) >= 0, icon: safeIcon(a.icon) });
     });
     (Array.isArray(s.home) ? s.home : Array.isArray(s.dock) ? s.dock : []).forEach(function (id) {
       if (!safeId(id) || h.indexOf(id) >= 0 || h.length >= CAP) return;
@@ -465,7 +467,7 @@
       if (request !== catalog.request) return;
       catalog.loading = false;
       if (err) { catalog.error = err.message || 'Could not read installed apps.'; if (!catalog.loaded) ALPHA = []; render(); return; }
-      oldFocus = top().id === 'apps' ? ALPHA[top().f.i] : null;
+      oldFocus = top().id === 'apps' ? appsItems(top())[top().f.i] : null;
       ALPHA = [];
       entries.forEach(function (entry) {
         var id = PRIMARY.indexOf(entry.brand) >= 0 ? entry.brand : entry.appId, a;
@@ -473,13 +475,14 @@
         a = app(id);
         if (!a) { a = { id: id }; APPS.push(a); }
         a.appId = entry.appId; a.brand = entry.brand || ''; a.mark = PRIMARY.indexOf(id) >= 0 ? PRIMARY_APPS[PRIMARY.indexOf(id)].mark : !!entry.brand;
-        a.icon = safeIcon(entry.icon);
+        a.icon = safeIcon(entry.icon); a.kind = entry.kind === 'input' ? 'input' : 'app';
         a.name = PRIMARY.indexOf(id) >= 0 ? PRIMARY_APPS[PRIMARY.indexOf(id)].name : String(entry.name).slice(0, 160);
         ALPHA.push(id);
       });
-      ALPHA.sort(function (a, b) { return app(a).name.toLowerCase().localeCompare(app(b).name.toLowerCase()); });
+      // Apps first, then the TV's inputs; each alphabetically.
+      ALPHA.sort(function (a, b) { return (app(a).kind === 'input') - (app(b).kind === 'input') || app(a).name.toLowerCase().localeCompare(app(b).name.toLowerCase()); });
       catalog.loaded = true; catalog.error = null; catalog.revision++;
-      if (top().id === 'apps' && oldFocus && ALPHA.indexOf(oldFocus) >= 0) top().f.i = ALPHA.indexOf(oldFocus);
+      if (top().id === 'apps' && oldFocus && appsItems(top()).indexOf(oldFocus) >= 0) top().f.i = appsItems(top()).indexOf(oldFocus);
       norm(); render();
     });
   }
@@ -504,7 +507,8 @@
   }
   function openMessage(key) { push({ id: 'message', msg: key, f: { b: 0 } }); }
   function openApps() {
-    var e = { id: 'apps', mode: 'browse', top: 0, f: { zone: 'grid', i: Math.max(0, ALPHA.indexOf(S.appsFocus)), h: 0 } };
+    var e = { id: 'apps', mode: 'browse', top: 0, f: { zone: 'grid', i: 0, h: 0 } };
+    e.f.i = Math.max(0, appsItems(e).indexOf(S.appsFocus));
     push(e); refreshCatalog(); return e;
   }
   function openEditor(origin) {
@@ -674,31 +678,41 @@
   };
 
   /* ---------- Installed apps ---------- */
-  function appsItems() { return catalog.error ? [] : ALPHA; }
-  function appsHead() { return catalog.error ? [['retry', 'Try again', '', '']] : [['editor', 'Apps on Home', '', 'home']]; }
+  // All apps lists apps; its Inputs view lists the tuner and external inputs.
+  function isInput(id) { return app(id).kind === 'input'; }
+  function appsItems(t) { return catalog.error ? [] : ALPHA.filter(function (id) { return isInput(id) === !!t.inputs; }); }
+  function appsHead(t) {
+    if (catalog.error) return [['retry', 'Try again', '', '']];
+    // Apps on Home stays first so header focus keeps its place when Inputs appears.
+    return !t.inputs && ALPHA.some(isInput) ? [['editor', 'Apps on Home', '', 'home'], ['inputs', 'Inputs', '', 'tv']] : [['editor', 'Apps on Home', '', 'home']];
+  }
+  function openInputs() { push({ id: 'apps', inputs: true, mode: 'browse', top: 0, f: { zone: 'grid', i: 0, h: 0 } }); }
   V.apps = {
     sheet: true,
     norm: function (t) {
-      var n = appsItems().length;
+      var n = appsItems(t).length;
       t.f.i = clamp(t.f.i, 0, Math.max(0, n - 1));
+      t.f.h = clamp(t.f.h || 0, 0, appsHead(t).length - 1);
       if (!n) t.f.zone = 'head';
     },
     key: function (t, k) {
-      var f = t.f, items = appsItems(), n = items.length, col = f.i % COLS, row = Math.floor(f.i / COLS);
+      var f = t.f, items = appsItems(t), n = items.length, col = f.i % COLS, row = Math.floor(f.i / COLS), head = appsHead(t), b;
       if (k === 'back') { pop(); return; }
       if (f.zone === 'head') {
         if (k === 'down' && n) f.zone = 'grid';
-        else if (k === 'ok') { if (catalog.error) refreshCatalog(); else openEditor('apps'); }
+        else if (k === 'left') f.h = Math.max(0, f.h - 1);
+        else if (k === 'right') f.h = Math.min(head.length - 1, f.h + 1);
+        else if (k === 'ok') { b = head[f.h][0]; if (b === 'retry') refreshCatalog(); else if (b === 'inputs') openInputs(); else openEditor('apps'); }
         return;
       }
       if (k === 'left' && col > 0) f.i--;
       else if (k === 'right' && col < COLS - 1 && f.i < n - 1) f.i++;
       else if (k === 'down' && row < Math.ceil(n / COLS) - 1) f.i = Math.min(f.i + COLS, n - 1);
-      else if (k === 'up') { if (row > 0) f.i -= COLS; else f.zone = 'head'; }
+      else if (k === 'up') { if (row > 0) f.i -= COLS; else { f.zone = 'head'; f.h = 0; } }
       else if (k === 'ok' && n) launch(items[f.i]);
-      S.appsFocus = items[f.i] || null;
+      if (!t.inputs) S.appsFocus = items[f.i] || null;
     },
-    point: function (t, z, i) { if (z === 'grid') { t.f.zone = 'grid'; t.f.i = i; } else if (z === 'head') t.f.zone = 'head'; else return; this.key(t, 'ok'); }
+    point: function (t, z, i) { if (z === 'grid') { t.f.zone = 'grid'; t.f.i = i; } else if (z === 'head') { t.f.zone = 'head'; t.f.h = i; } else return; this.key(t, 'ok'); }
   };
 
   /* ---------- B: two-zone Home editor ---------- */
@@ -1515,10 +1529,10 @@
   }
   var FILLS = {
     apps: function (t, el) {
-      var f = t.f, items = appsItems(), n = items.length, rows = Math.ceil(n / COLS), vis = 3, row = Math.floor(f.i / COLS);
-      setHTML(el.title, 'All apps');
-      setHTML(el.sub, esc(catalog.loading ? 'Loading installed apps…' : catalog.error || (!n ? 'No installed apps found.' : '')));
-      setHTML(el.head, headButtons(appsHead(), f.zone === 'head' ? 0 : -1, 'apps'));
+      var f = t.f, items = appsItems(t), n = items.length, rows = Math.ceil(n / COLS), vis = 3, row = Math.floor(f.i / COLS);
+      setHTML(el.title, t.inputs ? 'Inputs' : 'All apps');
+      setHTML(el.sub, esc(catalog.loading ? 'Loading installed apps…' : catalog.error || (!n ? (t.inputs ? 'No inputs found.' : 'No installed apps found.') : '')));
+      setHTML(el.head, headButtons(appsHead(t), f.zone === 'head' ? f.h : -1, 'apps'));
       el.head.className = 's-head' + (f.zone === 'head' ? ' is-awake' : '');
       if (f.zone === 'grid') { if (row < t.top) t.top = row; if (row > t.top + vis - 1) t.top = row - vis + 1; }
       t.top = clamp(t.top, 0, Math.max(0, rows - vis));

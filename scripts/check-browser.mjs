@@ -275,6 +275,25 @@ try {
     check('Denial lists the installed known apps without an error', same(names.slice().sort(), NAMES.concat(KNOWN_EXTRAS.map(e => e[1])).sort()) && !(await state()).catalog.error, names);
     check('Denial keeps saved Home', same((await state()).dock, PRIMARY));
   });
+  await run('Inputs are listed apart from apps', async () => {
+    await page({ catalog: CATALOG.concat([{ id: 'com.webos.app.hdmi1', name: 'HDMI 1', show: true }, { id: 'com.webos.app.livetv', name: 'Live TV', show: true }]) });
+    await library();
+    const appNames = await current.locator('[data-action^="apps.open."] .label').allTextContents();
+    check('All apps leaves out the tuner and inputs', appNames.length === 11 && !appNames.includes('HDMI 1') && !appNames.includes('Live TV'), appNames);
+    await nav('up');
+    check('Up from the first row reaches Apps on Home', (await state()).focusAction === 'apps.editor', (await state()).focusAction);
+    await nav('right', 'ok');
+    const inputNames = await current.locator('[data-action^="apps.open."] .label').allTextContents();
+    check('Inputs lists only the tuner and inputs', same(inputNames, ['HDMI 1', 'Live TV']) && (await current.locator('.s-title').innerText()) === 'Inputs', inputNames);
+    await nav('ok'); await current.waitForFunction(() => __tv.calls.length > 0);
+    check('An input opens through its webOS ID', (await current.evaluate(() => __tv.calls.at(-1))).id === 'com.webos.app.hdmi1');
+    await current.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await nav('back');
+    check('Back returns from Inputs to All apps', (await current.locator('.s-title').innerText()) === 'All apps' && (await call('where')).focusCount === 1);
+    await editor();
+    const other = await current.evaluate(() => [...document.querySelectorAll('[data-action^="editor.add."]')].map(e => e.getAttribute('data-action').slice(11)));
+    check('Apps on Home lists inputs after apps', same(other.slice(-2), ['com.webos.app.hdmi1', 'com.webos.app.livetv']), other);
+  });
   await run('Native icon and failed-image fallback', async () => {
     await page({ catalog: CATALOG.map(a => a.id === EXTRA ? { ...a, iconPath: '/home/assets/icons/netflix.svg' } : a) });
     await library();
