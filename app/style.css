@@ -43,6 +43,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .warn .ico{width:30px;height:30px;margin-top:5px}
 .error-chip{padding:6px 14px;color:var(--warn);white-space:nowrap}
 .full-name{max-width:1000px}
+/* The optional date line under the clock. With a date, the List caption starts at 72px so its
+   full-name line still ends at 220px, above the first List row. */
+.clock-date{font-size:30px;line-height:36px}
+.l-list .caption.has-date{top:72px}
+.bg-dark .clock-date,.bg-light .clock-date{opacity:.72}
 /* Base controls also serve wallpaper preview. Quiet Home utilities override them below. */
 .utils{position:absolute;right:112px;top:72px;display:flex;align-items:center}.utils>*+*{margin-left:8px}
 .u{height:64px;padding:0 26px 0 20px;border-radius:32px;display:inline-flex;align-items:center;font-size:30px;font-weight:500;letter-spacing:-.3px;white-space:nowrap;color:var(--mute);background:none;text-shadow:0 1px 2px rgba(0,0,0,.32);transition:background-color 140ms linear,color 140ms linear}.u>*+*{margin-left:12px}
@@ -233,7 +238,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .f-type .sheet .er.is-lifted .panel-content{transform:none}
 
 /* Settings overview: each group carries one short, committed summary. */
-.settings-overview{position:absolute;left:112px;top:212px;width:1056px}
+.settings-overview{position:absolute;left:112px;top:212px;width:1696px;display:flex;align-items:flex-start}
+.settings-column{width:824px;flex:none}
+.settings-column+.settings-column{margin-left:48px}
 .settings-group{width:100%;height:112px;padding:12px 32px 12px 28px;border-radius:20px;display:flex;align-items:center;justify-content:space-between;color:var(--ink);transition:background-color 140ms linear,color 140ms linear}.settings-group>*+*{margin-left:32px}
 .settings-group+.settings-group{margin-top:8px}
 .settings-group-copy{min-width:0;display:flex;flex-direction:column}.settings-group-copy>*+*{margin-top:4px}
@@ -282,6 +289,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .ed-order-break.is-on{display:flex}
 .ed-order-break::after{content:"";height:1px;flex:1;background:var(--line)}
 .editor-before,.editor-after{left:1408px;width:32px}
+
+/* Rename inputs: the input list on the left, preset names in two columns on the right. */
+.rn-view{position:absolute;left:112px;top:264px;width:880px;height:752px;overflow:hidden}
+.rn-inputs{position:absolute;left:0;top:0;width:880px}
+.rn-input{width:880px}
+.eo.rn-input.is-sel{box-shadow:inset 0 0 0 2px var(--line)}
+.eo .panel-content>.rn-was{margin-left:auto;padding-left:20px;flex:none;font-size:26px;color:var(--mute)}
+.eo.is-focus .rn-was{color:var(--ink)}
+.rn-names{position:absolute;left:1048px;top:264px;width:760px;height:480px}
+.setting-choice.rn-name{position:absolute;left:0;top:0;width:372px;height:72px;min-height:72px;padding:12px 20px;font-size:32px;line-height:40px}
+.rn-name .setting-tick{margin-left:auto}
+.rename-before,.rename-after{left:532px}
+.rename-before{top:224px}
+.rename-after{top:1020px}
 .editor-before{top:264px}
 .editor-after{top:976px}
 
@@ -506,18 +527,33 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .font-custom .home{font-family:var(--font-ui-family),sans-serif;font-weight:var(--font-ui-weight)}
 .font-custom .home .ph-name{font-family:var(--font-display-family),sans-serif;font-weight:var(--font-display-weight);letter-spacing:-.01em}
 .font-custom .home .clock{position:relative;top:var(--font-clock-shift);font-family:var(--font-display-family),sans-serif;font-weight:var(--font-clock-weight);letter-spacing:-.01em}
-.font-custom .home .tile .label,.font-custom .home .app-focus-name,.font-custom .home .full-name{font-family:var(--font-primary-family),sans-serif;font-weight:var(--font-primary-weight);letter-spacing:0}
+.font-custom .home .tile .label,.font-custom .home .app-focus-name,.font-custom .home .full-name,.font-custom .home .clock-date{font-family:var(--font-primary-family),sans-serif;font-weight:var(--font-primary-weight);letter-spacing:0}
 .font-custom .home .u,.font-custom .home .util-focus-label,.font-custom .home .btn,.font-custom .home .dock-empty p,.font-custom .home .ph-empty p{font-family:var(--font-ui-family),sans-serif;font-weight:var(--font-ui-weight);letter-spacing:0}
-.font-custom .home .full-name{position:relative;top:var(--font-full-name-shift)}
+.font-custom .home .full-name,.font-custom .home .clock-date{position:relative;top:var(--font-full-name-shift)}
 .font-custom .home .quiet-utils .u-label{position:relative;top:var(--font-utility-shift)}
 .font-custom.l-list .home .quiet-utils .u-label{top:calc(-1px + var(--font-utility-shift))}
-.home .monogram,.home .cap-line:not(.full-name),.home .error-chip{font-family:Manrope,Arial,sans-serif}
+.home .monogram,.home .cap-line:not(.full-name):not(.clock-date),.home .error-chip{font-family:Manrope,Arial,sans-serif}
 .font-newsreader .home{font-variation-settings:"opsz" 28;font-optical-sizing:none}
 .font-newsreader .home .ph-name{font-variation-settings:"opsz" 72;font-optical-sizing:none}
 .font-newsreader .home .clock{font-variation-settings:"opsz" 48;font-optical-sizing:none}
-.font-newsreader .home .tile .label,.font-newsreader .home .app-focus-name,.font-newsreader .home .full-name{font-variation-settings:"opsz" 36;font-optical-sizing:none}
+.font-newsreader .home .tile .label,.font-newsreader .home .app-focus-name,.font-newsreader .home .full-name,.font-newsreader .home .clock-date{font-variation-settings:"opsz" 36;font-optical-sizing:none}
 .font-newsreader .home .btn,.font-newsreader .home .dock-empty p,.font-newsreader .home .ph-empty p{font-variation-settings:"opsz" 36}
 .clock-digit{display:inline-block;width:var(--font-clock-digit);text-align:center;letter-spacing:0}
 .is-font-switch .home .ph-name,.is-font-switch .home .clock,.is-font-switch .home .tile .label,.is-font-switch .home .u-label,.is-font-switch .home .app-focus-name,.is-font-switch .home .util-focus-label{animation:font-in 160ms linear}
 @keyframes font-in{from{opacity:0}}
 @media(prefers-reduced-motion:reduce){.is-font-switch .home .ph-name,.is-font-switch .home .clock,.is-font-switch .home .tile .label,.is-font-switch .home .u-label,.is-font-switch .home .app-focus-name,.is-font-switch .home .util-focus-label{animation-duration:120ms}}
+
+/* Picture mode: the wallpaper alone with a quiet clock. Home is hidden, not re-rendered; the
+   caption stays inside it, so it keeps the Home font metrics and moves with screen shift. */
+.picture-shade,.photo-out{display:none}
+.picture-shade{position:absolute;left:0;top:0;width:1920px;height:1080px;background:radial-gradient(ellipse 760px 320px at 1700px 980px,rgba(8,8,8,.30),rgba(8,8,8,0))}
+.photo-out{transition:opacity 1200ms linear}
+.photo-out.is-fading{opacity:0}
+.stage.at-picture{cursor:none;background:#000}
+.stage.at-picture .scene{background:#000}
+.stage.at-picture .bg{display:block}
+.stage.at-picture .bg>div{display:none!important}
+.stage.at-picture .bg>.picture-shade,.stage.at-picture .bg>.photo-out{display:block!important}
+.stage.at-picture .home{visibility:hidden}
+.stage.at-picture .home .caption{visibility:visible;left:auto;right:120px;top:auto;bottom:88px;align-items:flex-end;text-align:right}
+.stage.at-picture .home .caption .clock,.stage.at-picture .home .caption .cap-line{color:#f6f1e7!important;opacity:.86!important;text-shadow:0 1px 3px rgba(0,0,0,.36),0 2px 12px rgba(0,0,0,.24)!important}

@@ -28,3 +28,5 @@ On webOS 5 a developer app is denied the installed-app and launch-point lists, s
 ## Not yet confirmed
 
 Record a result here only after the owner has seen it on the TV. Command success (install or launch returning without error) is not a visible result. Browser checks establish source behaviour; CPU-throttled Chromium timings are not TV benchmarks. Current browser checks are described in [testing](testing.md).
+
+Open TV checks for the features added after 0.6.1: Picture mode (start by Settings, 0 and idle; any key, click and pointer movement returning Home; the crossfade and rotation; whether the TV's screen saver or power saving interrupts it), the 24-hour clock and date line, input names, screen shift (no visible jump of the glass), the two-column Settings overview, and the Channel, number, colour and Magic Remote pointer and wheel controls.

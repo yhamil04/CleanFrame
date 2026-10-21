@@ -26,10 +26,14 @@ The public preview uses the included Manrope, Geist and Newsreader fonts.
 ## What you can change
 
 - Choose a List or Dock layout, with icons, names or both, for apps and Home controls separately.
-- Use a photograph, light or dark background, with a simple 12-hour clock.
+- Use a photograph, light or dark background, with a 12-hour or 24-hour clock and an optional date (for example "Tue 21 Oct").
 - Adjust typography, focus style and glass materials in Settings.
 - Choose and reorder up to nine Home apps; open other installed apps and the TV's inputs from All apps.
 - Open Live TV, LG Home and TV settings from CleanFrame.
+- Picture mode: LG TVs have no Art Mode, so CleanFrame can show the wallpaper full screen with only a quiet clock. Start it from Settings → Picture, with 0 on Home, or after 5, 15 or 30 minutes idle on Home; any key or pointer movement returns to Home.
+- Give the TV's inputs familiar names (PlayStation, Apple TV, Set-top box and other presets) from All apps → Inputs → Rename.
+- Screen shift, for OLED care, moves the Home clock, controls and apps by a few pixels every 30 minutes, keeping the glass aligned.
+- Use the Magic Remote pointer, wheel and remote shortcuts: number keys 1–9 open Home apps, the colour keys open All apps, Live TV, Apps on Home and Settings, and Channel Up/Down page through lists.
 - Select from fifteen wallpapers, with optional rotation. Preferences are saved on the TV.
 - Add your own photos as wallpapers with `npm run wallpapers:add -- <folder>`. They stay in the ignored `.local/wallpapers/` and are never committed; see [Your own photos](app/assets/wallpapers/README.md#your-own-photos).
 

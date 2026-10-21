@@ -33,6 +33,9 @@ Install, launch and inspect reach the TV; announce them to its owner first. The 
 - `app/device.js` calls `luna://com.webos.applicationManager` through `PalmServiceBridge` and exposes the `FrameDevice` interface used by `main.js`. Every call has an 8-second limit and reports a real error; no success is simulated.
 - LG Home is `com.webos.app.home`; TV settings is `com.palm.app.settings`; Live TV is `com.webos.app.livetv`.
 - `appinfo.json` sets `disableBackHistoryAPI`, so Back (keyCode 461) reaches CleanFrame.
+- Other remote keys CleanFrame uses: Channel Up/Down (keyCodes 33 and 34) page through lists; the number keys 0–9 (48–57, and 96–105 from a number pad) open Home apps 1–9 and start Picture mode with 0; the colour keys Red, Green, Yellow and Blue (403–406) open All apps, Live TV, Apps on Home and Settings. Number and colour keys act only on Home. LG Quick Access uses a *held* number key; CleanFrame acts on a press, once per press.
+- All apps reuses the last good catalogue for 10 minutes, so reopening it does not repeat about 20 `getAppLoadStatus` calls. **Try again** after a failure always bypasses that cache.
+- Picture mode keeps the screen showing a still photo indefinitely. Whether the TV's own screen saver, "no signal"/inactivity power-off or OLED care features interrupt it during Picture mode has not been checked on a TV. CleanFrame does not try to block them.
 - CSS avoids features newer than Chromium 68: flex `gap` became sibling margins and `inset` became explicit offsets. `:focus-visible` is ignored by this engine; it only affects a browser outline. `npm run check` rejects JavaScript newer than ES5 in the runtime scripts.
 
 ## Apps
@@ -47,4 +50,4 @@ To test an ID, open CleanFrame, run `npm run webos:inspect` and evaluate a `getA
 
 The remote's Home button and Back inside another app go to LG's own Home, not CleanFrame. A developer app cannot intercept those keys, replace the launcher or see which app is in front. Remapping Home or starting CleanFrame at power-on needs root (for example Homebrew Channel) and is outside this project. Public exploits list webOS 5 firmware from 5.4.0 (RootMyTV) or the latest releases (faultmanager) as patched. Check [CanI.RootMy.TV](https://cani.rootmy.tv/) before considering root.
 
-Without root, the quickest way back is LG's Quick Access: open CleanFrame, then press and hold a number key (1–8) and confirm. Holding that key then opens CleanFrame from Live TV or any app. Hold 0 to edit Quick Access. Moving CleanFrame to the start of the LG app bar also shortens the route through Home.
+Without root, the quickest way back is LG's Quick Access: open CleanFrame, then press and hold a number key (1–8) and confirm. A short press of the same key inside CleanFrame opens a Home app instead. Holding that key then opens CleanFrame from Live TV or any app. Hold 0 to edit Quick Access. Moving CleanFrame to the start of the LG app bar also shortens the route through Home.

@@ -409,8 +409,13 @@ try {
   });
   await run('Settings overview and visible choices', async () => {
     await page(); await scene('settings');
-    const expected = ['settings.group.background', 'settings.group.layout', 'settings.group.typography', 'settings.group.focus', 'settings.editor', 'settings.group.tv'];
-    check('Overview has all six settings groups', same((await call('actions')).filter(a => expected.includes(a)).sort(), expected.slice().sort()));
+    const expected = ['settings.group.background', 'settings.group.layout', 'settings.group.typography', 'settings.group.focus', 'settings.group.clock', 'settings.group.picture', 'settings.editor', 'settings.group.tv'];
+    check('Overview has all eight settings groups', same((await call('actions')).filter(a => a.startsWith('settings.')), expected), await call('actions'));
+    await nav('right'); check('Right moves to the second column at the same row', (await state()).focusAction === 'settings.group.clock');
+    await nav('down'); check('Down moves within the second column', (await state()).focusAction === 'settings.group.picture');
+    await nav('left'); check('Left returns to the first column at the same row', (await state()).focusAction === 'settings.group.layout');
+    await nav('down', 'down', 'down'); check('Down stops at the end of a column', (await state()).focusAction === 'settings.group.focus');
+    await nav('right', 'down', 'down'); check('The second column ends at LG TV', (await state()).focusAction === 'settings.group.tv' && (await call('where')).focusCount === 1);
     const specs = {
       background: { bg: ['dark', 'light', 'photo'] },
       layout: { layout: ['list', 'dock'], apps: ['icons', 'both', 'text'], controls: ['icons', 'both', 'text'] },
@@ -443,7 +448,7 @@ try {
   });
   await run('Settings focus never changes the applied Home', async () => {
     await page();
-    for (const name of ['background', 'layout', 'typography', 'focus', 'tv']) {
+    for (const name of ['background', 'layout', 'typography', 'focus', 'clock', 'picture', 'tv']) {
       await group(name); const before = await settingsSnapshot();
       const visited = new Set();
       for (const direction of ['right', 'right', 'down', 'left', 'left', 'down', 'right', 'right', 'down', 'left', 'up', 'up', 'up', 'right']) {
@@ -628,7 +633,7 @@ try {
     for (const width of [1920, 1280]) {
       await current.setViewportSize({ width, height: width * 9 / 16 });
       await current.waitForFunction(w => Math.abs(document.getElementById('stage').getBoundingClientRect().width - w) < 1, width);
-      for (const name of ['background', 'layout', 'typography', 'focus', 'tv', 'rotation']) {
+      for (const name of ['background', 'layout', 'typography', 'focus', 'clock', 'picture', 'tv', 'rotation']) {
         await group(name === 'rotation' ? 'background' : name);
         if (name === 'rotation') await act('background.rotation');
         const geometry = await current.evaluate(() => {
@@ -1060,6 +1065,219 @@ try {
     check('Channel Down pages the wallpaper list', (await state()).focusAction === 'wallpaper.choose.' + walls[6].id && (await state()).committed.wall === walls[0].id);
     await current.keyboard.press('PageUp'); await wallpaperSettled(walls[0].id);
     check('Channel Up returns to the first wallpaper', (await state()).focusAction === 'wallpaper.choose.' + walls[0].id);
+  });
+  await run('New preferences default safely and old preferences load unchanged', async () => {
+    const legacy = baseline({ dock: ['youtube', 'netflix'], wallpaper: walls[3].id, lastApp: 'youtube', mode: '15' });
+    await page({ seed: legacy });
+    let s = await state();
+    check('Legacy preferences keep their fields', same(s.dock, ['youtube', 'netflix']) && s.wallpaper === walls[3].id && s.mode === '15' && s.lastApp === 'youtube', s);
+    check('Legacy preferences get the new defaults', s.clock === '12' && s.date === 'off' && s.idle === 'off' && s.shift === 'off' && same(s.inputNames, {}), s);
+    check('Defaults are written with the next save', (await stored()).clock === '12' && same((await stored()).inputNames, {}));
+    await closePage();
+    // A 0.6.1 save: version 2 with an appearance object and no new fields.
+    const look = { bg: 'dark', wall: walls[2].id, layout: 'list', apps: 'text', font: 'manrope', controls: 'icons', focus: 'type', material: 'frost' };
+    const old = { bg: look.bg, wall: look.wall, layout: look.layout, apps: look.apps, font: look.font, controls: look.controls, focus: look.focus, material: look.material,
+      home: ['primevideo', 'netflix'], recent: ['youtube'], lastApp: 'primevideo', mode: '60', version: 2, look, dock: ['primevideo', 'netflix'], wallpaper: walls[2].id, theme: 'list', appRecords: [] };
+    await page({ seed: old });
+    s = await state();
+    check('A 0.6.1 save loads identically', same(s.look, look) && same(s.home, old.home) && same(s.recent, old.recent) && s.lastApp === old.lastApp && s.mode === old.mode, s);
+    check('A 0.6.1 save gets the new defaults', s.clock === '12' && s.date === 'off' && s.idle === 'off' && s.shift === 'off' && same(s.inputNames, {}));
+    check('Defaults leave the 12-hour clock without a date', /^\s*\d{1,2}:\d{2}\s*$/.test(await current.locator('#caption .clock').textContent()) && !(await current.locator('#caption .clock-date').count()));
+    await closePage();
+    await page({ seed: baseline({ clock: '25', date: 1, idle: '7', shift: 'yes', inputNames: { 'com.webos.app.hdmi1': 'Hacker <b>', 'com.webos.app.hdmi2': 'Xbox', 'bad id!': 'PC', ['__proto__']: 'PC', constructor: 'PC' } }) });
+    s = await state();
+    check('Invalid new values fall back to defaults', s.clock === '12' && s.date === 'off' && s.idle === 'off' && s.shift === 'off', s);
+    check('Only preset input names for safe IDs survive', same(s.inputNames, { 'com.webos.app.hdmi2': 'Xbox' }) && same((await stored()).inputNames, { 'com.webos.app.hdmi2': 'Xbox' }), s.inputNames);
+    await closePage();
+    await page({ seed: baseline({ clock: '24', date: 'on', idle: '15', shift: 'on', inputNames: ['Xbox'] }) });
+    s = await state();
+    check('Valid new values load', s.clock === '24' && s.date === 'on' && s.idle === '15' && s.shift === 'on' && same(s.inputNames, {}), s);
+  });
+  await run('Clock format and date', async () => {
+    const expected = () => current.evaluate(() => { const d = new Date(), h = d.getHours(), m = d.getMinutes(); return { h24: (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m, date: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] + ' ' + d.getDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()] }; });
+    await page({ seed: baseline({ dock: [EXTRA, 'netflix'], lastApp: EXTRA, appRecords: [{ id: EXTRA, appId: EXTRA, name: UNSAFE_NAME + ' and More', brand: '', icon: '' }] }) });
+    await group('clock');
+    check('Clock group opens on the applied format', (await state()).focusAction === 'choice.clock.12');
+    await act('choice.clock.24');
+    let e = await expected(), clock = (await current.locator('#caption .clock').textContent()).trim();
+    check('24-hour clock is zero-padded', /^\d{2}:\d{2}$/.test(clock) && (clock === e.h24 || clock.slice(0, 2) === e.h24.slice(0, 2)), { clock, e });
+    check('24-hour format is saved', (await stored()).clock === '24');
+    await act('choice.date.on');
+    e = await expected();
+    check('Date line reads like Tue 21 Oct', (await current.locator('#caption .clock-date').textContent()) === e.date, await current.locator('#caption .clock-date').textContent());
+    check('Date is saved', (await stored()).date === 'on');
+    await nav('back');
+    check('Overview summarises the clock', /24-hour, with date/.test(await current.locator('[data-action="settings.group.clock"]').innerText()) && (await state()).focusAction === 'settings.group.clock');
+    await act('settings.group.clock');
+    check('Clock group restores its last choice', (await state()).focusAction === 'choice.date.on');
+    const caption = () => current.evaluate(() => {
+      const st = document.getElementById('stage').getBoundingClientRect(), k = st.width / 1920, box = e => { const r = e.getBoundingClientRect(); return { top: (r.top - st.top) / k, bottom: (r.bottom - st.top) / k, left: (r.left - st.left) / k, right: (r.right - st.left) / k }; };
+      const q = s => document.querySelector('#caption ' + s), digits = document.querySelectorAll('#caption .clock-digit').length;
+      return { clock: box(q('.clock')), date: box(q('.clock-date')), full: q('.full-name') ? box(q('.full-name')) : null, digits, cell: getComputedStyle(document.getElementById('home')).getPropertyValue('--font-clock-digit').trim() };
+    });
+    for (const font of (await state()).fonts.available) for (const layout of ['list', 'dock']) {
+      await scene('home'); await look({ font, layout });
+      const g = await caption();
+      check('Clock and date stack without overlap ' + font + '/' + layout, g.clock.bottom <= g.date.top + 1 && (!g.full || g.date.bottom <= g.full.top + 1) && (g.cell === '0.00px' ? g.digits === 0 : g.digits === 4), g);
+      if (layout === 'list') check('List full name stays above the first row with a date ' + font, g.full && g.full.bottom <= 221, g);
+    }
+    await current.reload(); await ready();
+    check('Clock options survive reload', (await state()).clock === '24' && (await current.locator('#caption .clock-date').count()) === 1);
+  });
+  await run('Picture mode starts and returns', async () => {
+    await page();
+    const pictureShown = () => current.evaluate(() => ({ view: ShoreQA.state().view, home: getComputedStyle(document.getElementById('home')).visibility, caption: getComputedStyle(document.getElementById('caption')).visibility,
+      bg: getComputedStyle(document.getElementById('bg')).display, photo: document.getElementById('photo').getAttribute('src') || '', focus: ShoreQA.where().focusCount, sheet: document.getElementById('sheet').hidden }));
+    await nav('right'); const homeFocus = (await state()).focusAction, sel = (await state()).selected;
+    await group('picture');
+    check('Picture group opens on Start now', (await state()).focusAction === 'picture.start');
+    await act('picture.start');
+    let p = await pictureShown();
+    check('Start now shows the photo alone with the clock', p.view === 'picture' && p.home === 'hidden' && p.caption === 'visible' && p.bg === 'block' && p.photo.includes(walls[0].id) && p.focus === 0 && p.sheet, p);
+    await nav('right');
+    check('Any key returns to Home with the previous focus and does not act', (await call('where')).view === 'home' && (await state()).focusAction === homeFocus && (await state()).selected === sel, await call('where'));
+    await scene('settings');
+    check('Settings remembers the Picture group', (await state()).focusAction === 'settings.group.picture');
+    await scene('home');
+    await current.keyboard.press('Digit0');
+    check('Key 0 starts Picture mode on Home', (await state()).view === 'picture');
+    await current.keyboard.down('ArrowRight'); await current.keyboard.down('ArrowRight');
+    check('A held key wakes once and its repeats do nothing', (await state()).view === 'home' && (await state()).selected === sel);
+    await current.keyboard.up('ArrowRight');
+    await current.keyboard.down('Digit0'); await current.keyboard.down('Digit0');
+    check('A held 0 stays in Picture mode', (await state()).view === 'picture');
+    await current.keyboard.up('Digit0'); await current.keyboard.press('Enter');
+    check('OK in Picture mode returns without launching', (await state()).view === 'home' && (await current.evaluate(() => __tv.calls.length)) === 0);
+    await current.keyboard.press('Digit0'); await current.waitForTimeout(600);
+    await current.mouse.move(400, 300); await current.mouse.move(420, 320);
+    check('Pointer movement returns to Home', (await state()).view === 'home');
+    await current.keyboard.press('Digit0'); await current.mouse.click(960, 800);
+    check('A click returns to Home without opening anything', (await state()).view === 'home' && (await current.evaluate(() => __tv.calls.length)) === 0);
+    await act('util.apps'); await current.keyboard.press('Digit0');
+    check('Key 0 is ignored in panels', (await state()).view === 'apps');
+    await scene('home'); await current.keyboard.press('Digit0'); await current.evaluate(() => { __setHidden(true); __setHidden(false); });
+    check('Hiding CleanFrame ends Picture mode', (await state()).view === 'home');
+    await look({ bg: 'dark' }); await current.keyboard.press('Digit0'); await ready();
+    p = await pictureShown();
+    check('A flat background still shows the photo in Picture mode', p.view === 'picture' && p.bg === 'block' && p.photo.includes((await state()).wallpaper) && (await state()).shown.bg === 'dark', p);
+    check('Picture mode uses no live blur', (await noLiveFilters()).length === 0);
+    await current.screenshot({ path: out + 'picture-dark-1920.jpg', quality: 90 });
+    await nav('back');
+    check('Back returns from Picture mode to flat Home', (await state()).view === 'home' && (await call('where')).focusCount === 1);
+  });
+  await run('Picture mode starts after idle time on Home only', async () => {
+    await page({ minuteMs: 100, seed: baseline({ idle: '5' }) });
+    await current.waitForFunction(() => ShoreQA.state().view === 'picture', null, { timeout: 4000 });
+    check('Idle Home starts Picture mode after the chosen time', (await call('where')).focusCount === 0);
+    await nav('down');
+    check('A key after idle start returns Home', (await state()).view === 'home' && (await state()).idleTimer.armed);
+    for (let i = 0; i < 8; i++) { await current.mouse.move(300 + i * 40, 300); await current.waitForTimeout(120); }
+    check('Pointer movement keeps Home awake', (await state()).view === 'home');
+    await current.waitForFunction(() => ShoreQA.state().view === 'picture', null, { timeout: 4000 });
+    await nav('back'); await scene('settings'); await current.waitForTimeout(900);
+    check('The idle timer does not run outside Home', (await state()).view === 'settings' && !(await state()).idleTimer.armed);
+    await group('picture'); await act('choice.idle.off'); await scene('home'); await current.waitForTimeout(900);
+    check('Idle Off never starts Picture mode', (await state()).view === 'home' && (await stored()).idle === 'off');
+    await current.evaluate(() => __setHidden(true));
+    check('The idle timer stops while CleanFrame is hidden', !(await state()).idleTimer.armed);
+  });
+  await run('Picture mode rotation and crossfade', async () => {
+    await page({ minuteMs: 100, seed: baseline({ mode: '5' }) });
+    const first = (await state()).wallpaper;
+    await current.keyboard.press('Digit0');
+    check('Rotation counts Picture mode time', (await state()).rotation.active && (await state()).view === 'picture');
+    await current.waitForFunction(id => ShoreQA.state().wallpaper !== id, first, { timeout: 5000 });
+    const next = (await state()).wallpaper;
+    check('Picture mode advances the wallpaper on the rotation interval', next === walls[1].id && (await state()).view === 'picture' && (await stored()).wallpaper === next);
+    check('The old photo crossfades out over the new one', await current.evaluate(() => !!document.querySelector('.photo-out')) && (await current.locator('#photo').getAttribute('src')).includes(next));
+    const loaded = await current.evaluate(id => [...new Set(performance.getEntriesByType('resource').map(r => new URL(r.name).pathname).filter(u => u.includes('/' + id)))], next);
+    check('Rotation loads only the existing bundle images', loaded.length > 0 && loaded.every(u => new RegExp('/wallpapers/' + next + '(-panel)?\\.jpg$|/materials/' + next + '-').test(u)), loaded);
+    await nav('back'); await look({ bg: 'light' });
+    const flat = (await state()).wallpaper;
+    await current.keyboard.press('Digit0');
+    await current.waitForFunction(id => ShoreQA.state().wallpaper !== id, flat, { timeout: 5000 }); await ready();
+    check('Picture mode rotates on a flat background too', (await current.locator('#photo').getAttribute('src')).includes((await state()).wallpaper) && (await state()).look.bg === 'light');
+    await nav('back'); await closePage();
+    await page({ minuteMs: 100, seed: baseline({ mode: 'fixed' }) });
+    await current.keyboard.press('Digit0'); await current.waitForTimeout(900);
+    check('Fixed keeps one photo in Picture mode', (await state()).wallpaper === walls[0].id && (await state()).view === 'picture');
+  });
+  await run('Input names', async () => {
+    const HDMI1 = 'com.webos.app.hdmi1', HDMI2 = 'com.webos.app.hdmi2', LIVE = 'com.webos.app.livetv';
+    const inputsCatalog = CATALOG.concat([{ id: HDMI1, name: 'HDMI 1', show: true }, { id: HDMI2, name: 'HDMI 2', show: true }, { id: LIVE, name: 'Live TV', show: true }]);
+    const gridNames = () => current.locator('[data-action^="apps.open."] .label').allTextContents();
+    await page({ catalog: inputsCatalog }); await library();
+    check('All apps has no Rename action', !(await call('actions')).includes('apps.rename'));
+    await act('apps.inputs'); await nav('down', 'right', 'up');
+    check('Inputs page offers Rename next to its tab', same((await call('actions')).filter(a => /^apps\.(all|inputs|rename|editor)$/.test(a)), ['apps.all', 'apps.inputs', 'apps.rename', 'apps.editor']) && (await state()).focusAction === 'apps.inputs');
+    await nav('right', 'ok');
+    check('Rename opens on the last focused input', (await state()).view === 'rename' && (await state()).rename.input === HDMI2 && (await state()).focusAction === 'rename.input.' + HDMI2 && (await call('where')).focusCount === 1, (await state()).rename);
+    await nav('right');
+    check('Right reaches the names at the applied choice', (await state()).focusAction === 'rename.name.0');
+    const before = (await state()).writes;
+    await nav('right', 'ok');
+    check('OK saves a preset name', same((await stored()).inputNames, { [HDMI2]: 'PlayStation' }) && (await state()).writes === before + 1);
+    await nav('ok');
+    check('OK on the applied name does not write again', (await state()).writes === before + 1);
+    check('The input list shows the new and original names', (await current.locator('[data-action="rename.input.' + HDMI2 + '"]').innerText()).replace(/\s+/g, ' ').includes('PlayStation HDMI 2'));
+    await nav('back');
+    check('Back returns from names to inputs', (await state()).focusAction === 'rename.input.' + HDMI2);
+    await nav('back');
+    check('Back returns to Inputs on the renamed input', (await state()).view === 'apps' && (await state()).focusAction === 'apps.open.' + HDMI2 && same(await gridNames(), ['HDMI 1', 'PlayStation', 'Live TV']), await gridNames());
+    check('A renamed input keeps its bundled glyph', (await current.locator('[data-action="apps.open.' + HDMI2 + '"] [data-mark]').getAttribute('data-mark')) === 'input-hdmi');
+    await nav('ok'); await current.waitForFunction(() => __tv.calls.length === 1);
+    check('Grid OK still launches the input', (await current.evaluate(() => __tv.calls[0].id)) === HDMI2);
+    await current.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await editor(); await act('editor.add.' + HDMI2);
+    check('The editor uses the new name', (await current.locator('[data-action="editor.move.' + HDMI2 + '"]').innerText()).includes('PlayStation'));
+    await scene('home');
+    check('Home uses the new name', (await current.locator('[data-action="home.app.' + HDMI2 + '"]').getAttribute('aria-label')) === 'PlayStation' && (await current.locator('[data-action="home.app.' + HDMI2 + '"]').innerText()).includes('PlayStation'));
+    await current.evaluate(() => { __tv.launchFailure = true; }); await act('home.app.' + HDMI2);
+    await current.waitForFunction(() => ShoreQA.where().view === 'message');
+    check('The launch error title uses the new name', (await current.locator('.msg-title').innerText()) === 'PlayStation');
+    await current.evaluate(() => { window.dispatchEvent(new Event('focus')); __tv.launchFailure = false; });
+    await current.reload(); await ready(); await library(); await act('apps.inputs');
+    check('Input names survive reload', same(await gridNames(), ['HDMI 1', 'PlayStation', 'Live TV']));
+    await act('apps.rename');
+    await current.locator('[data-action="rename.name.2"]').hover();
+    check('Pointer hover focuses a name without saving it', (await state()).focusAction === 'rename.name.2' && (await stored()).inputNames[HDMI1] === undefined);
+    await current.evaluate(() => { __failWrites = true; }); await nav('ok');
+    check('A failed save keeps the name and says so', same((await stored()).inputNames, { [HDMI2]: 'PlayStation' }) && /couldn.t save/i.test(await current.locator('.s-sub').innerText()));
+    await current.evaluate(() => { __failWrites = false; }); await nav('ok');
+    check('OK retries the failed save', (await stored()).inputNames[HDMI1] === 'Xbox');
+    await nav('back', 'down');
+    await nav('right'); await current.locator('[data-action="rename.name.0"]').click();
+    check('Original name removes the saved name', same((await stored()).inputNames, { [HDMI1]: 'Xbox' }));
+    await act('rename.done');
+    check('Done returns to Inputs', (await state()).view === 'apps' && same(await gridNames(), ['Xbox', 'HDMI 2', 'Live TV']), await gridNames());
+  });
+  await run('Screen shift keeps the glass registered', async () => {
+    await page({ minuteMs: 60 });
+    const registration = () => current.evaluate(() => {
+      const st = document.getElementById('stage').getBoundingClientRect(), k = st.width / 1920;
+      return [...document.querySelectorAll('.ph-plate.is-current .ph-field-img, #matImg')].filter(e => e.getClientRects().length && getComputedStyle(e.closest('.ph-plate, .dock')).display !== 'none').map(e => { const r = e.getBoundingClientRect(); return { id: e.id, dx: (r.left - st.left) / k, dy: (r.top - st.top) / k }; });
+    });
+    const homeBox = () => current.evaluate(() => { const st = document.getElementById('stage').getBoundingClientRect(), r = document.getElementById('home').getBoundingClientRect(), k = st.width / 1920; return { x: (r.left - st.left) / k, y: (r.top - st.top) / k }; });
+    check('Screen shift is off by default', !(await state()).screenShift.on && (await state()).screenShift.transform === '');
+    await group('clock'); await act('choice.shift.on');
+    let s = (await state()).screenShift;
+    check('Screen shift moves Home with one small transform', s.on && /^translate\(/.test(s.transform) && Math.hypot(s.x, s.y) > 0 && Math.hypot(s.x, s.y) <= 4 && (await stored()).shift === 'on', s);
+    await scene('home'); await nav('up');
+    let box = await homeBox(), reg = await registration();
+    check('Dock, controls and clock move by the shift', Math.abs(box.x - s.x) < .6 && Math.abs(box.y - s.y) < .6, box);
+    check('Dock material and the control lens stay registered to the photo', reg.length === 2 && reg.every(r => Math.abs(r.dx) < .6 && Math.abs(r.dy) < .6), reg);
+    await nav('down'); await look({ layout: 'list', focus: 'glass' });
+    reg = await registration();
+    check('The List plate stays registered to the photo', reg.length === 1 && reg.every(r => Math.abs(r.dx) < .6 && Math.abs(r.dy) < .6), reg);
+    await current.waitForFunction(old => { const s = ShoreQA.state().screenShift; return s.x !== old.x || s.y !== old.y; }, s, { timeout: 4000 });
+    const moved = (await state()).screenShift; reg = await registration();
+    check('The offset changes on the fixed cycle', Math.hypot(moved.x, moved.y) <= 4 && reg.every(r => Math.abs(r.dx) < .6 && Math.abs(r.dy) < .6), { moved, reg });
+    await current.keyboard.press('Digit0');
+    box = await homeBox(); s = (await state()).screenShift;
+    check('Picture mode clock shifts too', (await state()).view === 'picture' && Math.abs(box.x - s.x) < .6 && Math.abs(box.y - s.y) < .6);
+    await nav('back'); await group('clock'); await act('choice.shift.off'); await scene('home');
+    box = await homeBox(); reg = await registration();
+    check('Turning screen shift off restores the original position', !(await state()).screenShift.on && (await state()).screenShift.transform === '' && Math.abs(box.x) < .1 && Math.abs(box.y) < .1 && reg.every(r => Math.abs(r.dx) < .6 && Math.abs(r.dy) < .6), { box, reg });
   });
   section = 'Run integrity';
   report.sourceAfter = hashes();
