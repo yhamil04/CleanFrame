@@ -1,18 +1,17 @@
 /* webOS TV application manager calls through PalmServiceBridge. No Mac server, network address or credentials. */
 (function () {
   'use strict';
-  // UK webOS app IDs for the default Home apps. Names and order live in main.js.
-  var IDS = {
-    netflix: 'netflix', youtube: 'youtube.leanback.v4', primevideo: 'amazon',
-    disneyplus: 'com.disney.disneyplus-prod', bbciplayer: 'bbc.iplayer.3.0', itvx: 'com.fvp.itv',
-    appletv: 'com.apple.appletv', spotify: 'spotify-beehive'
-  };
-  var NAMES = {
-    netflix: 'Netflix', youtube: 'YouTube', primevideo: 'Prime Video', disneyplus: 'Disney+',
-    bbciplayer: 'BBC iPlayer', itvx: 'ITVX', appletv: 'Apple TV', spotify: 'Spotify'
-  };
+  // Default Home apps, verified on the UK reference TV. Names and order live in main.js.
+  var IDS = { netflix: 'netflix', youtube: 'youtube.leanback.v4', primevideo: 'amazon', disneyplus: 'com.disney.disneyplus-prod' };
+  var NAMES = { netflix: 'Netflix', youtube: 'YouTube', primevideo: 'Prime Video', disneyplus: 'Disney+' };
   // Other launch points with a bundled mark.
-  var EXTRA_BRANDS = {};
+  var EXTRA_BRANDS = { 'com.apple.appletv': 'appletv', 'com.apple.applemusic': 'applemusic', 'spotify-beehive': 'spotify' };
+  // When the launch-point list is denied, All apps offers these and the Home apps, if installed.
+  // BBC iPlayer, ITVX and Spotify IDs are the usual UK ones but were not installed on the reference TV.
+  var MORE = [['com.apple.appletv', 'Apple TV'], ['com.apple.applemusic', 'Apple Music'], ['bbc.iplayer.3.0', 'BBC iPlayer'], ['com.fvp.itv', 'ITVX'],
+    ['spotify-beehive', 'Spotify'], ['tv.twitch.tv.starshot.lg', 'Twitch'], ['com.webos.app.livetv', 'Live TV'],
+    ['com.webos.app.browser', 'Web Browser'], ['com.webos.app.photovideo', 'Photo & Video'], ['com.webos.app.music', 'Music'],
+    ['com.webos.app.hdmi1', 'HDMI 1'], ['com.webos.app.hdmi2', 'HDMI 2'], ['com.webos.app.hdmi3', 'HDMI 3'], ['com.webos.app.hdmi4', 'HDMI 4']];
   var HOME = 'com.webos.app.home', SETTINGS = 'com.palm.app.settings';
   // System launch points that are not apps a viewer would put on Home.
   var INTERNAL = /^com\.webos\.app\.(?:home|discovery|customersupport|membership|softwareupdate|notificationcenter|voice|tvhotkey|channelsetting|scheduler)$/;
@@ -64,17 +63,26 @@
     return map;
   }
   function rank(brand) { return brand && IDS[brand] ? Object.keys(IDS).indexOf(brand) : 30; }
-  // Non-system apps may be denied the launch-point list. Offer the known UK apps instead;
-  // launching one that is not installed reports the TV's own error. Other failures can be retried.
-  function fixedList() {
-    return Object.keys(IDS).map(function (brand) { return { appId: IDS[brand], name: NAMES[brand], brand: brand, icon: '', rank: rank(brand) }; });
+  // Non-system apps may be denied the launch-point list, but may ask whether an app exists.
+  // Offer the installed candidates; if that check also fails, offer them all and let launch report.
+  function fixedList(done) {
+    var list = Object.keys(IDS).map(function (brand) { return { appId: IDS[brand], name: NAMES[brand], brand: brand, icon: '', rank: rank(brand) }; })
+      .concat(MORE.map(function (m) { return { appId: m[0], name: m[1], brand: EXTRA_BRANDS[m[0]] || '', icon: '', rank: 30 }; }));
+    var left = list.length, keep = [];
+    list.forEach(function (entry, i) {
+      call('getAppLoadStatus', { appId: entry.appId }, function (err, reply) {
+        keep[i] = err || reply.exist !== false;
+        if (--left) return;
+        done(list.filter(function (entry, i) { return keep[i]; }).sort(function (a, b) { return a.rank - b.rank || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); }));
+      });
+    });
   }
   function apps(done) {
     if (!available()) { unavailable(done); return; }
     call('listLaunchPoints', {}, function (err, reply) {
       var map = known(), me = self(), seen = {}, result = [];
       if (err && !/denied|permission|not allowed|unknown method/i.test(err.detail || '')) { done(err); return; }
-      if (err || !reply.launchPoints || !reply.launchPoints.length) { api.source = 'fixed'; done(null, fixedList()); return; }
+      if (err || !reply.launchPoints || !reply.launchPoints.length) { api.source = 'fixed'; fixedList(function (list) { done(null, list); }); return; }
       api.source = 'launchPoints';
       reply.launchPoints.forEach(function (p) {
         var id = p && p.id, brand = map[id] || EXTRA_BRANDS[id] || '';

@@ -13,16 +13,11 @@
   var KEYS = { 37: 'left', 38: 'up', 39: 'right', 40: 'down', 13: 'ok', 27: 'back', 8: 'back', 10009: 'back', 461: 'back' };
   var FULL = 'Home holds nine apps. Remove one first.', LAST = 'Home needs one app';
 
-  // mark: a bundled brand mark exists in assets/icons. Others use the TV's icon or initials.
   var PRIMARY_APPS = [
     { id: 'netflix', name: 'Netflix', mark: true, appId: 'netflix' },
     { id: 'youtube', name: 'YouTube', mark: true, appId: 'youtube.leanback.v4' },
     { id: 'primevideo', name: 'Prime Video', mark: true, appId: 'amazon' },
-    { id: 'disneyplus', name: 'Disney+', mark: true, appId: 'com.disney.disneyplus-prod' },
-    { id: 'bbciplayer', name: 'BBC iPlayer', mark: false, appId: 'bbc.iplayer.3.0' },
-    { id: 'itvx', name: 'ITVX', mark: false, appId: 'com.fvp.itv' },
-    { id: 'appletv', name: 'Apple TV', mark: true, appId: 'com.apple.appletv' },
-    { id: 'spotify', name: 'Spotify', mark: true, appId: 'spotify-beehive' }
+    { id: 'disneyplus', name: 'Disney+', mark: true, appId: 'com.disney.disneyplus-prod' }
   ];
   var PRIMARY = PRIMARY_APPS.map(function (a) { return a.id; }), APPS = PRIMARY_APPS.slice(), ALPHA = [];
   var WALLS = window.CleanFrameWallpapers || [{ id: 'misty', name: 'Misty coast', tone: 'light', ut: { tr: 'mist', br: 'mist' }, frostVeil: .20 }];
@@ -330,7 +325,7 @@
     var legacyList = s.theme === 'list', h = [], recent = [], records = Array.isArray(s.appRecords) ? s.appRecords : [];
     records.slice(0, 256).forEach(function (a) {
       if (!a || !safeId(a.id) || !safeId(a.appId) || typeof a.name !== 'string' || !a.name.trim() || app(a.id)) return;
-      APPS.push({ id: a.id, appId: a.appId, name: a.name.slice(0, 160), brand: ['hbomax', 'spotify', 'tubi'].indexOf(a.brand) >= 0 ? a.brand : '', mark: ['hbomax', 'spotify', 'tubi'].indexOf(a.brand) >= 0, icon: safeIcon(a.icon) });
+      APPS.push({ id: a.id, appId: a.appId, name: a.name.slice(0, 160), brand: ['hbomax', 'spotify', 'tubi', 'applemusic', 'appletv'].indexOf(a.brand) >= 0 ? a.brand : '', mark: ['hbomax', 'spotify', 'tubi', 'applemusic', 'appletv'].indexOf(a.brand) >= 0, icon: safeIcon(a.icon) });
     });
     (Array.isArray(s.home) ? s.home : Array.isArray(s.dock) ? s.dock : []).forEach(function (id) {
       if (!safeId(id) || h.indexOf(id) >= 0 || h.length >= CAP) return;

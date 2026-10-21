@@ -4,15 +4,16 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { openPreview, root } from './browser.mjs';
 
 const KEY = 'cleanframe.home.v1';
-const PRIMARY = ['netflix', 'youtube', 'primevideo', 'disneyplus', 'bbciplayer', 'itvx', 'appletv', 'spotify'];
-const IDS = ['netflix', 'youtube.leanback.v4', 'amazon', 'com.disney.disneyplus-prod', 'bbc.iplayer.3.0', 'com.fvp.itv', 'com.apple.appletv', 'spotify-beehive'];
-const NAMES = ['Netflix', 'YouTube', 'Prime Video', 'Disney+', 'BBC iPlayer', 'ITVX', 'Apple TV', 'Spotify'];
+const PRIMARY = ['netflix', 'youtube', 'primevideo', 'disneyplus'];
+const IDS = ['netflix', 'youtube.leanback.v4', 'amazon', 'com.disney.disneyplus-prod'];
+const NAMES = ['Netflix', 'YouTube', 'Prime Video', 'Disney+'];
 const EXTRA = 'com.example.familyapp', EXTRA2 = 'com.example.morningnews', BROWSER = 'com.webos.app.browser';
 const UNSAFE_NAME = 'Family <img src=x onerror="window.__catalogXss=1"> & TV';
-const CATALOG = IDS.map((id, i) => ({ id, name: NAMES[i], show: true, iconPath: '' })).concat([
+// Installed apps that the adapter also knows as fallback candidates.
+const KNOWN_EXTRAS = [['com.apple.appletv', 'Apple TV'], ['spotify-beehive', 'Spotify'], ['com.apple.applemusic', 'Apple Music'], ['tv.twitch.tv.starshot.lg', 'Twitch'], [BROWSER, 'Web Browser']];
+const CATALOG = IDS.map((id, i) => ({ id, name: NAMES[i], show: true, iconPath: '' })).concat(KNOWN_EXTRAS.map(([id, name]) => ({ id, name, show: true, iconPath: '' }))).concat([
   { id: EXTRA, name: UNSAFE_NAME, show: true, iconPath: '' },
   { id: EXTRA2, name: 'Morning News', show: true, iconPath: '' },
-  { id: BROWSER, name: 'Web Browser', show: true, iconPath: '' },
   { id: 'com.yhamil.cleanframe', name: 'CleanFrame', show: true },
   { id: 'com.webos.app.discovery', name: 'LG Content Store', show: true },
   { id: 'netflix', name: 'Netflix', show: true }
@@ -77,6 +78,8 @@ function installHarness({ seed, legacy, mock, catalog, minuteMs, catalogFailure,
       const ok = list => reply(bridge, points(list)), fail = err => reply(bridge, { returnValue: false, errorCode: -1, errorText: err.message });
       const finish = () => tv.catalogFailure ? fail({ message: tv.catalogDenied ? 'Denied method call "listLaunchPoints"' : 'Catalogue unavailable for QA' }) : ok(tv.catalog.map(a => ({ ...a })));
       if (tv.holdCatalog) tv.pending.push({ ok: list => ok(list), fail }); else finish();
+    } else if (method === 'getAppLoadStatus') {
+      reply(bridge, { returnValue: true, exist: tv.catalog.some(a => a.id === params.appId) });
     } else if (method === 'launch') {
       tv.calls.push({ method: 'launch', id: params.id });
       reply(bridge, tv.launchFailure ? { returnValue: false, errorCode: -101, errorText: 'App unavailable for QA' } : { returnValue: true, processId: '1' });
@@ -269,7 +272,7 @@ try {
     await page({ catalogFailure: true });
     await current.evaluate(() => { __tv.catalogDenied = true; }); await library();
     const names = await current.locator('[data-action^="apps.open."] .label').allTextContents();
-    check('Denial lists the known UK apps without an error', same(names.slice().sort(), NAMES.slice().sort()) && !(await state()).catalog.error, names);
+    check('Denial lists the installed known apps without an error', same(names.slice().sort(), NAMES.concat(KNOWN_EXTRAS.map(e => e[1])).sort()) && !(await state()).catalog.error, names);
     check('Denial keeps saved Home', same((await state()).dock, PRIMARY));
   });
   await run('Native icon and failed-image fallback', async () => {
@@ -310,6 +313,7 @@ try {
     await act('editor.move.netflix'); await nav('down', 'ok');
     const moved = start.slice(), at = moved.indexOf('netflix'); [moved[at], moved[at + 1]] = [moved[at + 1], moved[at]];
     check('Placed move persists immediately', same((await stored()).dock, moved));
+    for (const [id] of KNOWN_EXTRAS.slice(0, 8 - PRIMARY.length)) await act('editor.add.' + id);
     await act('editor.add.' + EXTRA2); check('Ninth app can be added', (await state()).dock.length === 9 && (await state()).dock.includes(EXTRA2));
     await act('editor.add.' + EXTRA); check('Nine-app cap prevents addition', (await state()).dock.length === 9 && !(await state()).dock.includes(EXTRA));
     await remove(EXTRA2); await act('editor.add.' + EXTRA);
