@@ -1257,14 +1257,15 @@ try {
       const st = document.getElementById('stage').getBoundingClientRect(), k = st.width / 1920;
       return [...document.querySelectorAll('.ph-plate.is-current .ph-field-img, #matImg')].filter(e => e.getClientRects().length && getComputedStyle(e.closest('.ph-plate, .dock')).display !== 'none').map(e => { const r = e.getBoundingClientRect(); return { id: e.id, dx: (r.left - st.left) / k, dy: (r.top - st.top) / k }; });
     });
-    const homeBox = () => current.evaluate(() => { const st = document.getElementById('stage').getBoundingClientRect(), r = document.getElementById('home').getBoundingClientRect(), k = st.width / 1920; return { x: (r.left - st.left) / k, y: (r.top - st.top) / k }; });
+    // The test cycle is 1.8 s, so read the position and the current offset together.
+    const homeBox = () => current.evaluate(() => { const st = document.getElementById('stage').getBoundingClientRect(), r = document.getElementById('home').getBoundingClientRect(), k = st.width / 1920, s = ShoreQA.state().screenShift; return { x: (r.left - st.left) / k, y: (r.top - st.top) / k, shift: [s.x, s.y] }; });
     check('Screen shift is off by default', !(await state()).screenShift.on && (await state()).screenShift.transform === '');
     await group('clock'); await act('choice.shift.on');
     let s = (await state()).screenShift;
     check('Screen shift moves Home with one small transform', s.on && /^translate\(/.test(s.transform) && Math.hypot(s.x, s.y) > 0 && Math.hypot(s.x, s.y) <= 4 && (await stored()).shift === 'on', s);
     await scene('home'); await nav('up');
     let box = await homeBox(), reg = await registration();
-    check('Dock, controls and clock move by the shift', Math.abs(box.x - s.x) < .6 && Math.abs(box.y - s.y) < .6, box);
+    check('Dock, controls and clock move by the shift', Math.abs(box.x - box.shift[0]) < .6 && Math.abs(box.y - box.shift[1]) < .6, box);
     check('Dock material and the control lens stay registered to the photo', reg.length === 2 && reg.every(r => Math.abs(r.dx) < .6 && Math.abs(r.dy) < .6), reg);
     await nav('down'); await look({ layout: 'list', focus: 'glass' });
     reg = await registration();
@@ -1273,8 +1274,8 @@ try {
     const moved = (await state()).screenShift; reg = await registration();
     check('The offset changes on the fixed cycle', Math.hypot(moved.x, moved.y) <= 4 && reg.every(r => Math.abs(r.dx) < .6 && Math.abs(r.dy) < .6), { moved, reg });
     await current.keyboard.press('Digit0');
-    box = await homeBox(); s = (await state()).screenShift;
-    check('Picture mode clock shifts too', (await state()).view === 'picture' && Math.abs(box.x - s.x) < .6 && Math.abs(box.y - s.y) < .6);
+    box = await homeBox();
+    check('Picture mode clock shifts too', (await state()).view === 'picture' && Math.hypot(box.shift[0], box.shift[1]) > 0 && Math.abs(box.x - box.shift[0]) < .6 && Math.abs(box.y - box.shift[1]) < .6, box);
     await nav('back'); await group('clock'); await act('choice.shift.off'); await scene('home');
     box = await homeBox(); reg = await registration();
     check('Turning screen shift off restores the original position', !(await state()).screenShift.on && (await state()).screenShift.transform === '' && Math.abs(box.x) < .1 && Math.abs(box.y) < .1 && reg.every(r => Math.abs(r.dx) < .6 && Math.abs(r.dy) < .6), { box, reg });
