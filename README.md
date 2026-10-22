@@ -47,7 +47,7 @@ The glass and blur are rendered ahead of time. The TV loads the finished images 
 2. Set your own app ID in the git-ignored `.local/webos.json`, for example `{"id": "com.<yourname>.cleanframe", "vendor": "<your name>"}`.
 3. Run `npm run webos:package`, then `npm run webos:install` and `npm run webos:launch`.
 
-Without root, CleanFrame is an app you open from the LG app bar. It does not replace LG's Home: the remote's Home button and Back inside other apps still go to LG's own Home, and CleanFrame cannot start at power-on. The quickest way back is LG's **Quick Access**: open CleanFrame, press and hold a number key (1–8) and confirm. Holding that key then opens CleanFrame from Live TV or any app.
+Without root, CleanFrame is an app you open from the LG app bar. It does not replace LG's Home: the remote's Home button and Back inside other apps still go to LG's own Home, and CleanFrame cannot start itself at power-on. With **Home Auto Launch** off and **Quick Start+** on, the TV resumes CleanFrame if it was open when you turned the TV off. The quickest way back is LG's **Quick Access**: open CleanFrame, press and hold a number key (1–8) and confirm. Holding that key then opens CleanFrame from Live TV or any app.
 
 A Developer Mode session lasts about 50 hours. Press Extend in the Developer Mode app before it expires, or the TV removes developer apps. See the [TV status](docs/tv-status.md) record for what has been confirmed on the reference TV.
 

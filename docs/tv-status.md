@@ -18,15 +18,19 @@ The TV's network address, device identifiers and the installed app ID are privat
 - The Dock Home renders; remote arrows, OK and Back work.
 - Apps open from CleanFrame; LG Home and TV settings open from CleanFrame.
 - All apps lists Stremio, HBO Max, Pathé and Viaplay, and they open.
+- Picture mode starts from Settings, the 0 key and the idle timer; any key, click or pointer movement returns Home; the photos crossfade and rotate. The TV's screen saver and power saving did not interrupt it.
+- The 12/24-hour clock, the date line, input names, screen shift (no visible jump of the glass) and the two-column Settings overview.
+- Channel Up/Down, the number and colour keys, and Magic Remote pointing and wheel scrolling.
+- With Home Auto Launch off and Quick Start+ on, CleanFrame left open is back on screen after turning the TV off and on with the remote. A full power cut (unplugging) has not been checked.
 
 The default Home app IDs, Netflix (`netflix`), YouTube (`youtube.leanback.v4`), Prime Video (`amazon`) and Disney+ (`com.disney.disneyplus-prod`), were verified on this TV. Also verified installed: Apple TV (`com.apple.appletv`), Apple Music (`com.apple.applemusic`), Stremio (`io.strem.tv`), HBO Max (`com.wbd.hbomax`), Pathé (`pathe`), Viaplay (`viaplay-lg`), Web Browser, Photo & Video, Music, Live TV and HDMI 1–4. BBC iPlayer (`bbc.iplayer.3.0`), ITVX (`com.fvp.itv`) and Spotify (`spotify-beehive`) are listed with their usual IDs but were not installed there. Videoland's ID has not been found.
 
 ## Known limits
 
-On webOS 5 a developer app is denied the installed-app and launch-point lists, so All apps uses a fixed list of known IDs. The remote's Home button and Back inside other apps go to LG's Home; CleanFrame cannot start at power-on without root. See [LG webOS](webos.md).
+On webOS 5 a developer app is denied the installed-app and launch-point lists, so All apps uses a fixed list of known IDs. The remote's Home button and Back inside other apps go to LG's Home; CleanFrame cannot start itself at power-on without root; with Quick Start+ the TV resumes it if it was open when the TV was turned off. See [LG webOS](webos.md).
 
 ## Not yet confirmed
 
 Record a result here only after the owner has seen it on the TV. Command success (install or launch returning without error) is not a visible result. Browser checks establish source behaviour; CPU-throttled Chromium timings are not TV benchmarks. Current browser checks are described in [testing](testing.md).
 
-Open TV checks for the features added after 0.6.1: Picture mode (start by Settings, 0 and idle; any key, click and pointer movement returning Home; the crossfade and rotation; whether the TV's screen saver or power saving interrupts it), the 24-hour clock and date line, input names, screen shift (no visible jump of the glass), the two-column Settings overview, and the Channel, number, colour and Magic Remote pointer and wheel controls.
+Every feature added in 0.6.1 has been confirmed on the reference TV. Still to check: whether CleanFrame comes back after a full power cut.
